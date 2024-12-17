@@ -43,23 +43,25 @@ import (
 var log = logger.MustGetLogger("genesis.store.sync")
 
 type GenesisSync struct {
-	data   atomic.Value
-	ctx    context.Context
-	cancel context.CancelFunc
-	queue  queue.QueueReader
-	config *config.ControllerConfig
+	isMaster bool
+	data     atomic.Value
+	ctx      context.Context
+	cancel   context.CancelFunc
+	queue    queue.QueueReader
+	config   *config.ControllerConfig
 }
 
-func NewGenesisSync(ctx context.Context, queue queue.QueueReader, config *config.ControllerConfig) *GenesisSync {
+func NewGenesisSync(ctx context.Context, isMaster bool, queue queue.QueueReader, config *config.ControllerConfig) *GenesisSync {
 	var data atomic.Value
 	data.Store(common.GenesisSyncData{})
 	ctx, cancel := context.WithCancel(ctx)
 	return &GenesisSync{
-		ctx:    ctx,
-		cancel: cancel,
-		data:   data,
-		queue:  queue,
-		config: config,
+		isMaster: isMaster,
+		ctx:      ctx,
+		cancel:   cancel,
+		data:     data,
+		queue:    queue,
+		config:   config,
 	}
 }
 

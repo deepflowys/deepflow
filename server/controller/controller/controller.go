@@ -125,7 +125,7 @@ func Start(ctx context.Context, configPath, serverLogFile string, shared *server
 
 	router.SetInitStageForHealthChecker("Genesis init")
 	// 启动genesis
-	g := genesis.NewGenesis(ctx, cfg)
+	g := genesis.NewGenesis(ctx, isMasterController, cfg)
 
 	// start tagrecorder before manager to prevent recorder from publishing message when tagrecorder is not ready
 	router.SetInitStageForHealthChecker("TagRecorder init")
