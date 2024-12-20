@@ -144,7 +144,8 @@ func (a *AgentGroupConfig) GetAgentGroupConfigTemplateJson() ([]byte, error) {
 	// TODO get from ck
 	l7Protocols := []string{
 		"HTTP", "HTTP2", "Dubbo", "gRPC", "SOFARPC", "FastCGI", "bRPC", "Tars", "Some/IP", "MySQL", "PostgreSQL",
-		"Oracle", "Redis", "MongoDB", "Memcached", "Kafka", "MQTT", "AMQP", "OpenWire", "NATS", "Pulsar", "ZMTP", "DNS", "TLS", "Custom"}
+		"Oracle", "Redis", "MongoDB", "Memcached", "Kafka", "MQTT", "AMQP", "OpenWire", "NATS", "Pulsar", "ZMTP",
+		"RocketMQ", "DNS", "TLS", "Custom"}
 	l7ProtocolsYamlBytes, err := yaml.Marshal(l7Protocols)
 	if err != nil {
 		return nil, err
