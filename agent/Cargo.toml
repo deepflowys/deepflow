@@ -56,6 +56,7 @@ http2 = { path = "plugins/http2" }
 humantime-serde = "1.0"
 hyper = { version = "0.14", features = ["full"] }
 integration_skywalking = { path = "plugins/integration_skywalking" }
+integration_vector = { path = "plugins/integration_vector" }
 ipnet = "2.4.0"
 ipnetwork = "0.18.0"
 lazy_static = "1.5.0"

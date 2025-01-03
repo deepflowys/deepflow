@@ -996,6 +996,7 @@ dependencies = [
  "humantime-serde",
  "hyper 0.14.26",
  "integration_skywalking",
+ "integration_vector",
  "ipnet",
  "ipnetwork",
  "k8s-openapi 0.16.0",
@@ -2003,6 +2004,14 @@ dependencies = [
  "hyper 0.14.26",
  "prost",
  "public",
+]
+
+[[package]]
+name = "integration_vector"
+version = "0.1.0"
+dependencies = [
+ "serde_yaml 0.9.25",
+ "tokio",
 ]
 
 [[package]]

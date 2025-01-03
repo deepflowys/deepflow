@@ -5412,6 +5412,62 @@ inputs:
 | ---- | ---------------------------- |
 | Type | bool |
 
+## Vector {#inputs.vector}
+
+### Vector Component Disabled {#inputs.vector.enabled}
+
+**Tags**:
+
+`hot_update`
+<mark>ee_feature</mark>
+
+**FQCN**:
+
+`inputs.vector.enabled`
+
+**Default value**:
+```yaml
+inputs:
+  vector:
+    enabled: false
+```
+
+**Schema**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | bool |
+
+**Description**:
+
+The switcher control for Vector component running.
+
+### Vector Component Config {#inputs.vector.config}
+
+**Tags**:
+
+`hot_update`
+<mark>ee_feature</mark>
+
+**FQCN**:
+
+`inputs.vector.config`
+
+**Default value**:
+```yaml
+inputs:
+  vector:
+    config: null
+```
+
+**Schema**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | dict |
+
+**Description**:
+
+The detail config for Vector Component, all availble config keys could be found in https://vector.dev/docs/reference/configuration
+
 # Processors {#processors}
 
 ## Packet {#processors.packet}

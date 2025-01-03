@@ -40,6 +40,7 @@ use flate2::{
 use flexi_logger::{
     colored_opt_format, writers::LogWriter, Age, Cleanup, Criterion, FileSpec, Logger, Naming,
 };
+use integration_vector::vector_component::VectorComponent;
 use log::{debug, info, warn};
 use num_enum::{FromPrimitive, IntoPrimitive};
 use tokio::runtime::{Builder, Runtime};
@@ -1750,6 +1751,7 @@ pub struct AgentComponents {
     pub policy_getter: PolicyGetter,
     pub npb_bandwidth_watcher: Box<Arc<NpbBandwidthWatcher>>,
     pub npb_arp_table: Arc<NpbArpTable>,
+    pub vector_component: VectorComponent,
     pub is_ce_version: bool, // Determine whether the current version is a ce version, CE-AGENT always set pcap-assembler disabled
     pub tap_interfaces: Vec<Link>,
     pub bpf_options: Arc<Mutex<BpfOptions>>,
@@ -3036,6 +3038,11 @@ impl AgentComponents {
             &stats::NoTagModule("npb_bandwidth_watcher"),
             Countable::Ref(Arc::downgrade(&npb_bandwidth_watcher_counter) as Weak<dyn RefCountable>),
         );
+        let vector_component = VectorComponent::new(
+            user_config.inputs.vector.enabled,
+            user_config.inputs.vector.config.clone(),
+            runtime.clone(),
+        );
 
         Ok(AgentComponents {
             config: candidate_config.clone(),
@@ -3085,6 +3092,7 @@ impl AgentComponents {
             policy_getter,
             npb_bandwidth_watcher,
             npb_arp_table,
+            vector_component,
             runtime,
             dispatcher_components,
             is_ce_version: version_info.name != env!("AGENT_NAME"),
@@ -3167,6 +3175,7 @@ impl AgentComponents {
 
         self.npb_bandwidth_watcher.start();
         self.npb_arp_table.start();
+        self.vector_component.start();
         #[cfg(any(target_os = "linux", target_os = "android"))]
         self.process_listener.start();
         info!("Started agent components.");
@@ -3254,6 +3263,9 @@ impl AgentComponents {
         }
         #[cfg(any(target_os = "linux", target_os = "android"))]
         if let Some(h) = self.process_listener.notify_stop() {
+            join_handles.push(h);
+        }
+        if let Some(h) = self.vector_component.notify_stop() {
             join_handles.push(h);
         }
 

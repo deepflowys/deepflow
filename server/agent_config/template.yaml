@@ -3693,6 +3693,42 @@ inputs:
       # description:
       # upgrade_from: static_config.external-log-integration-disabled
       log_integration_disabled: false
+  # type: section
+  # name:
+  #   en: Vector
+  #   ch: vector
+  # description:
+  vector:
+    # type: bool
+    # name:
+    #   en: Vector Component Disabled
+    #   ch: 禁用 Vector 组件
+    # unit:
+    # range: []
+    # enum_options: []
+    # modification: hot_update
+    # ee_feature: true
+    # description:
+    #   en: |-
+    #     The switcher control for Vector component running.
+    #   ch: |-
+    #     对 Vector 组件的开关控制。
+    enabled: false
+    # type: dict
+    # name:
+    #   en: Vector Component Config
+    #   ch: Vector 组件配置控制
+    # unit:
+    # range: []
+    # enum_options: []
+    # modification: hot_update
+    # ee_feature: true
+    # description:
+    #   en: |-
+    #     The detail config for Vector Component, all availble config keys could be found in https://vector.dev/docs/reference/configuration
+    #   ch: |-
+    #     Vector 组件的具体配置，所有可用配置可在此链接中查找：https://vector.dev/docs/reference/configuration
+    config:
 
 # type: section
 # name:

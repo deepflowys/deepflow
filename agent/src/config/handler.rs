@@ -2503,6 +2503,19 @@ impl ConfigHandler {
         );
     }
 
+    fn set_vector(handler: &ConfigHandler, components: &mut AgentComponents) {
+        components.vector_component.on_config_change(
+            handler.candidate_config.user_config.inputs.vector.enabled,
+            handler
+                .candidate_config
+                .user_config
+                .inputs
+                .vector
+                .config
+                .clone(),
+        );
+    }
+
     fn set_restart_dispatcher(handler: &ConfigHandler, components: &mut AgentComponents) {
         for d in components.dispatcher_components.iter_mut() {
             d.stop();
@@ -4562,6 +4575,20 @@ impl ConfigHandler {
                 tunning.session_aggregate_slot_capacity, new_tunning.session_aggregate_slot_capacity);
             tunning.session_aggregate_slot_capacity = new_tunning.session_aggregate_slot_capacity;
             restart_agent = !first_run;
+        }
+
+        let vector = &mut config.inputs.vector;
+        let new_vector = &mut new_config.user_config.inputs.vector;
+        if vector.enabled != new_vector.enabled || vector.config != new_vector.config {
+            info!(
+                "vector inputs.vector from {:#?} to {:#?}",
+                vector, new_vector
+            );
+            if components.is_some() {
+                callbacks.push(Self::set_vector);
+            }
+            vector.enabled = new_vector.enabled;
+            vector.config = new_vector.config.clone();
         }
 
         candidate_config.enabled = new_config.enabled;

@@ -5265,6 +5265,62 @@ inputs:
 | ---- | ---------------------------- |
 | Type | bool |
 
+## vector {#inputs.vector}
+
+### 禁用 Vector 组件 {#inputs.vector.enabled}
+
+**标签**:
+
+`hot_update`
+<mark>ee_feature</mark>
+
+**FQCN**:
+
+`inputs.vector.enabled`
+
+**默认值**:
+```yaml
+inputs:
+  vector:
+    enabled: false
+```
+
+**模式**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | bool |
+
+**详细描述**:
+
+对 Vector 组件的开关控制。
+
+### Vector 组件配置控制 {#inputs.vector.config}
+
+**标签**:
+
+`hot_update`
+<mark>ee_feature</mark>
+
+**FQCN**:
+
+`inputs.vector.config`
+
+**默认值**:
+```yaml
+inputs:
+  vector:
+    config: null
+```
+
+**模式**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | dict |
+
+**详细描述**:
+
+Vector 组件的具体配置，所有可用配置可在此链接中查找：https://vector.dev/docs/reference/configuration
+
 # 处理器 {#processors}
 
 ## Packet {#processors.packet}
