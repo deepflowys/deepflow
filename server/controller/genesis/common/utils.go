@@ -36,6 +36,7 @@ import (
 	simplejson "github.com/bitly/go-simplejson"
 	"inet.af/netaddr"
 
+	"github.com/deepflowio/deepflow/message/agent"
 	"github.com/deepflowio/deepflow/server/controller/common"
 	"github.com/deepflowio/deepflow/server/controller/db/metadb"
 	metadbmodel "github.com/deepflowio/deepflow/server/controller/db/metadb/model"
@@ -545,4 +546,14 @@ func GetTeamShortLcuuidToInfo() (map[string]TeamInfo, error) {
 		}
 	}
 	return teamIDToOrgID, nil
+}
+
+func IsAgentInterestedHost(aType agent.AgentType) bool {
+	types := []agent.AgentType{agent.AgentType_TT_PROCESS, agent.AgentType_TT_HOST_POD, agent.AgentType_TT_VM_POD, agent.AgentType_TT_PHYSICAL_MACHINE, agent.AgentType_TT_PUBLIC_CLOUD, agent.AgentType_TT_K8S_SIDECAR}
+	for _, t := range types {
+		if t == aType {
+			return true
+		}
+	}
+	return false
 }
