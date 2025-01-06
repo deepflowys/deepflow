@@ -2150,6 +2150,10 @@ impl ConfigHandler {
                 new_config.yaml_config.external_log_integration_disabled
             );
         }
+        if yaml_config.promisc != new_config.yaml_config.promisc {
+            info!("promisc set to {}", new_config.yaml_config.promisc);
+            restart_dispatcher = true;
+        }
 
         if *yaml_config != new_config.yaml_config {
             *yaml_config = new_config.yaml_config;

@@ -598,6 +598,10 @@ vtap_group_id: g-xxxxxx
   ##   using this configuration item. The size of each block is fixed at 1MB.
   #afpacket-blocks: 128
 
+  ## Set the NIC promiscuous mode
+  ## Note: When the NIC is set to promiscuous mode, more traffic is collected.
+  #promisc: false
+
   ###################
   ## Analyzer Mode ##
   ###################

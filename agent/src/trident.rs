@@ -3007,6 +3007,8 @@ fn build_dispatchers(
             cpu_set: dispatcher_config.cpu_set,
             #[cfg(target_os = "linux")]
             fanout_enabled,
+            #[cfg(any(target_os = "linux", target_os = "android"))]
+            promisc: yaml_config.promisc,
             ..Default::default()
         })))
         .bpf_options(bpf_options)

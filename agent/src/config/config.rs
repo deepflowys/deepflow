@@ -531,6 +531,7 @@ pub struct YamlConfig {
     pub af_packet_blocks_enabled: bool,
     #[serde(alias = "afpacket-blocks")]
     pub af_packet_blocks: usize,
+    pub promisc: bool,
     pub enable_debug_stats: bool,
     pub analyzer_dedup_disabled: bool,
     pub default_tap_type: u32,
@@ -940,6 +941,7 @@ impl Default for YamlConfig {
             profiler: false,
             af_packet_blocks_enabled: false,
             af_packet_blocks: 128,
+            promisc: false,
             enable_debug_stats: false,
             analyzer_dedup_disabled: false,
             default_tap_type: 3,

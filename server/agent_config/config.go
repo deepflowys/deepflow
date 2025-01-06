@@ -106,6 +106,7 @@ type StaticConfig struct {
 	Profiler                           *bool                        `yaml:"profiler,omitempty"`
 	AfpacketBlocksEnabled              *bool                        `yaml:"afpacket-blocks-enabled,omitempty"`
 	AfpacketBlocks                     *int                         `yaml:"afpacket-blocks,omitempty"`
+	Promisc                            *bool                        `yaml:"promisc,omitempty"`
 	AnalyzerRawPacketBlockSize         *int                         `yaml:"analyzer-raw-packet-block-size,omitempty"`
 	BatchedBufferSizeLimit             *int                         `yaml:"batched-buffer-size-limit,omitempty"`
 	EnableDebugStats                   *bool                        `yaml:"enable-debug-stats,omitempty"`

@@ -569,6 +569,8 @@ pub struct Options {
     pub cpu_set: CpuSet,
     #[cfg(any(target_os = "linux", target_os = "android"))]
     pub fanout_enabled: bool,
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    pub promisc: bool,
 }
 
 impl Options {

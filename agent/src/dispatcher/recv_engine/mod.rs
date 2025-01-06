@@ -112,6 +112,14 @@ impl RecvEngine {
         }
     }
 
+    pub fn set_promisc(&mut self, if_index: &Vec<i32>) -> Result<()> {
+        match self {
+            #[cfg(any(target_os = "linux", target_os = "android"))]
+            Self::AfPacket(e) => e.set_promisc(if_index).map_err(|e| e.into()),
+            _ => return Ok(()),
+        }
+    }
+
     pub fn get_counter_handle(&self) -> Arc<dyn stats::RefCountable> {
         match self {
             #[cfg(any(target_os = "linux", target_os = "android"))]
