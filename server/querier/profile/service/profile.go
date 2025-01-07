@@ -42,8 +42,9 @@ var log = logging.MustGetLogger("profile")
 var InstanceProfileEventType = []string{"inuse_objects", "inuse_space", "goroutines", "mem-inuse"}
 
 const (
-	initLocationCapacity = 1024
-	initNodeCapacity     = 8192
+	initLocationCapacity     = 1024
+	initNodeCapacity         = 8192
+	FILTER_TRIGGER_THRESHOLD = 10000
 )
 
 func Profile(args model.Profile, cfg *config.QuerierConfig) (result model.ProfileTree, debug interface{}, err error) {
@@ -236,12 +237,18 @@ func GenerateProfile(args model.Profile, cfg *config.QuerierConfig, where string
 	for i := range result.FunctionValues.Values {
 		result.FunctionValues.Values[i] = []int{0, 0}
 	}
+
 	result.NodeValues.Values = make([][]int, 0, len(nodes))
 	for _, node := range nodes {
 		locationID := node.LocationID
 		result.FunctionValues.Values[locationID][0] += node.SelfValue
 		result.FunctionValues.Values[locationID][1] += node.TotalValue
 		result.NodeValues.Values = append(result.NodeValues.Values, []int{locationID, node.ParentNodeID, node.SelfValue, node.TotalValue})
+	}
+
+	if !cfg.Profile.ResultFilter.Disabled {
+		totalValueThreshold := int(float64(nodes[0].TotalValue) * cfg.Profile.ResultFilter.TotalValuePercent / 100)
+		filterResults(nodes, &result, totalValueThreshold, cfg.Profile.ResultFilter.Depth)
 	}
 
 	result.Functions = locations
@@ -254,6 +261,64 @@ func GenerateProfile(args model.Profile, cfg *config.QuerierConfig, where string
 	debugs.FormatTime = formatTime
 	debug = debugs
 	return
+}
+
+func isFilterDiscard(node *model.ProfileTreeNode, totalValueThreshold, depthThreshold int) bool {
+	return node.TotalValue < totalValueThreshold && node.Depth > depthThreshold
+}
+
+func filterResults(nodes []model.ProfileTreeNode, result *model.ProfileTree, totalValueThreshold, depthThreshold int) {
+	if len(nodes) < FILTER_TRIGGER_THRESHOLD {
+		return
+	}
+	// get the nodeid that needs to be deleted,
+	deleteNodeIDs := []int{}
+	for i, node := range nodes {
+		calculateDepth(nodes, i)
+		if !isFilterDiscard(&nodes[i], totalValueThreshold, depthThreshold) {
+			continue
+		}
+		if node.ParentNodeID >= 0 {
+			nodes[node.ParentNodeID].SelfValue = nodes[node.ParentNodeID].SelfValue + node.TotalValue
+		}
+		deleteNodeIDs = append(deleteNodeIDs, i)
+	}
+
+	// 获取删除 nodeId 后的id和删除前的id的映射表，用于更新 parentNodeID
+	// obtain the mapping table between the id after nodeId is deleted and the id before deletion, used to update parentNodeID
+	mapping := getMapping(len(nodes), deleteNodeIDs)
+
+	maxDepth := 0
+	result.NodeValues.Values = result.NodeValues.Values[:0]
+	for i, node := range nodes {
+		if isFilterDiscard(&nodes[i], totalValueThreshold, depthThreshold) {
+			continue
+		}
+		parentNodeID := node.ParentNodeID
+		if node.ParentNodeID != -1 {
+			parentNodeID = mapping[node.ParentNodeID]
+		}
+		result.NodeValues.Values = append(result.NodeValues.Values, []int{node.LocationID, parentNodeID, node.SelfValue, node.TotalValue})
+
+		if node.Depth > maxDepth {
+			maxDepth = node.Depth
+		}
+	}
+	log.Infof("profile total nodes count %d, total value is %d, value threshold is %d, depth threshold is %d, valid node count %d, maxDepth=%d", len(nodes), nodes[0].TotalValue, totalValueThreshold, depthThreshold, len(result.NodeValues.Values), maxDepth)
+}
+
+func calculateDepth(nodes []model.ProfileTreeNode, thisNodeID int) {
+	thisNode := &nodes[thisNodeID]
+	depth := 1
+	for thisNode.ParentNodeID >= 0 {
+		thisNode = &nodes[thisNode.ParentNodeID]
+		if thisNode.Depth > 0 {
+			depth += thisNode.Depth
+			break
+		}
+		depth++
+	}
+	nodes[thisNodeID].Depth = depth
 }
 
 func newProfileTreeNode(locationID, selfValue, totalValue int) model.ProfileTreeNode {
@@ -275,7 +340,6 @@ func updateAllParentNodes(nodes []model.ProfileTreeNode, thisNodeID, selfValue, 
 		thisNode = &nodes[thisNode.ParentNodeID]
 		thisNode.TotalValue += totalValue
 	}
-
 }
 
 func CutKernelFunction(profileLocationByteSlice []byte, maxKernelStackDepth int, sep string) ([]byte, bool) {
@@ -342,4 +406,23 @@ func GetLocationType(locations []string, locationValues [][]int, profileEventTyp
 		}
 	}
 	return locationTypes
+}
+
+func getMapping(arrLen int, indicesToRemove []int) map[int]int {
+	removed := make(map[int]struct{})
+	for _, index := range indicesToRemove {
+		removed[index] = struct{}{}
+	}
+
+	mapping := make(map[int]int)
+	newIndex := 0
+
+	for i := 0; i < arrLen; i++ {
+		if _, found := removed[i]; !found {
+			mapping[i] = newIndex
+			newIndex++
+		}
+	}
+
+	return mapping
 }

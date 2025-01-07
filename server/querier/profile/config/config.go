@@ -22,9 +22,10 @@ import (
 	"reflect"
 	"regexp"
 
-	"github.com/op/go-logging"
-	"gopkg.in/yaml.v2"
 	"strings"
+
+	logging "github.com/op/go-logging"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var log = logging.MustGetLogger("profile")
@@ -35,16 +36,23 @@ type Config struct {
 }
 
 type ProfileConfig struct {
-	LogFile         string  `default:"/var/log/profile.log" yaml:"log-file"`
-	LogLevel        string  `default:"info" yaml:"log-level"`
-	ListenPort      int     `default:"20419" yaml:"listen-port"`
-	FlameQueryLimit int     `default:"1000000" yaml:"flame_query_limit"`
-	Querier         Querier `yaml:"querier"`
+	LogFile         string       `default:"/var/log/profile.log" yaml:"log-file"`
+	LogLevel        string       `default:"info" yaml:"log-level"`
+	ListenPort      int          `default:"20419" yaml:"listen-port"`
+	FlameQueryLimit int          `default:"1000000" yaml:"flame_query_limit"`
+	Querier         Querier      `yaml:"querier"`
+	ResultFilter    ResultFilter `yaml:"result-filter"`
 }
 
 type Querier struct {
 	Host string `default:"127.0.0.1" yaml:"host"`
 	Port int    `default:"20416" yaml:"port"`
+}
+
+type ResultFilter struct {
+	Disabled          bool    `default:"false" yaml:"disabled"`
+	TotalValuePercent float64 `default:"0.1" yaml:"total-value-percent"`
+	Depth             int     `default:"12" yaml:"depth"`
 }
 
 func (c *Config) expendEnv() {
