@@ -21,6 +21,7 @@ import (
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
 	"github.com/deepflowio/deepflow/server/libs/datatype"
 	flow_metrics "github.com/deepflowio/deepflow/server/libs/flow-metrics"
+	"github.com/deepflowio/deepflow/server/libs/utils"
 )
 
 type ExtMetricsBlock struct {
@@ -33,6 +34,7 @@ type ExtMetricsBlock struct {
 	ColTagValues          *proto.ColArr[string]
 	ColMetricsFloatNames  *proto.ColArr[string]
 	ColMetricsFloatValues *proto.ColArr[float64]
+	ColHost               *proto.ColLowCardinality[string]
 }
 
 func (b *ExtMetricsBlock) Reset() {
@@ -46,6 +48,7 @@ func (b *ExtMetricsBlock) Reset() {
 	b.ColTagValues.Reset()
 	b.ColMetricsFloatNames.Reset()
 	b.ColMetricsFloatValues.Reset()
+	b.ColHost.Reset()
 }
 
 func (b *ExtMetricsBlock) ToInput(input proto.Input) proto.Input {
@@ -57,6 +60,7 @@ func (b *ExtMetricsBlock) ToInput(input proto.Input) proto.Input {
 		proto.InputColumn{Name: ckdb.COLUMN_TAG_VALUES, Data: b.ColTagValues},
 		proto.InputColumn{Name: ckdb.COLUMN_METRICS_FLOAT_NAMES, Data: b.ColMetricsFloatNames},
 		proto.InputColumn{Name: ckdb.COLUMN_METRICS_FLOAT_VALUES, Data: b.ColMetricsFloatValues},
+		proto.InputColumn{Name: ckdb.COLUMN_HOST, Data: b.ColHost},
 	)
 	if b.MsgType != datatype.MESSAGE_TYPE_DFSTATS && b.MsgType != datatype.MESSAGE_TYPE_SERVER_DFSTATS {
 		input = b.UniversalTagBlock.ToInput(input)
@@ -73,6 +77,7 @@ func (n *ExtMetrics) NewColumnBlock() ckdb.CKColumnBlock {
 		ColTagValues:          new(proto.ColStr).Array(),
 		ColMetricsFloatNames:  new(proto.ColStr).LowCardinality().Array(),
 		ColMetricsFloatValues: new(proto.ColFloat64).Array(),
+		ColHost:               new(proto.ColStr).LowCardinality(),
 	}
 }
 
@@ -89,4 +94,9 @@ func (n *ExtMetrics) AppendToColumnBlock(b ckdb.CKColumnBlock) {
 	block.ColTagValues.Append(n.TagValues)
 	block.ColMetricsFloatNames.Append(n.MetricsFloatNames)
 	block.ColMetricsFloatValues.Append(n.MetricsFloatValues)
+	if i := utils.IndexOf(n.TagNames, ckdb.COLUMN_HOST); i >= 0 {
+		block.ColHost.Append(n.TagValues[i])
+	} else {
+		block.ColHost.Append("")
+	}
 }

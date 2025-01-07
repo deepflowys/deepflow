@@ -1,2 +1,3 @@
-# Name                     , ClientName                , ServerName                , Type          , EnumFile           , Category    , Permission   , Deprecated
-time                       , time                      , time                      , time          ,                    , Timestamp   , 111          , 0
+# Name                     , ClientName                , ServerName                , Type          , EnumFile           , Category        , Permission   , Deprecated
+time                       , time                      , time                      , time          ,                    , Timestamp       , 111           , 0
+host                       , host                      , host                      , string        ,                    , Universal Tag   , 111           , 0

@@ -20,7 +20,7 @@ import (
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
 )
 
-var AllColumnAdds = [][]*ColumnAdds{ColumnAdd64, ColumnAdd65, ColumnAdd66}
+var AllColumnAdds = [][]*ColumnAdds{ColumnAdd64, ColumnAdd65, ColumnAdd66, ColumnAdd70}
 var AllIndexAdds = [][]*IndexAdd{getIndexAdds(IndexAdd64), getIndexAdds(IndexAdd65)}
 var AllColumnMods = [][]*ColumnMod{}
 var AllColumnRenames = [][]*ColumnRename{getColumnRenames(ColumnRename65)}
@@ -374,5 +374,26 @@ var ColumnAdd66 = []*ColumnAdds{
 		Tables:      []string{"in_process", "in_process_local"},
 		ColumnNames: []string{"auto_instance_type", "auto_service_type"},
 		ColumnType:  ckdb.UInt8,
+	},
+}
+
+var ColumnAdd70 = []*ColumnAdds{
+	{
+		Dbs:         []string{"deepflow_tenant"},
+		Tables:      []string{"deepflow_collector", "deepflow_collector_local"},
+		ColumnNames: []string{"host"},
+		ColumnType:  ckdb.LowCardinalityString,
+	},
+	{
+		Dbs:         []string{"deepflow_admin"},
+		Tables:      []string{"deepflow_server", "deepflow_server_local"},
+		ColumnNames: []string{"host"},
+		ColumnType:  ckdb.LowCardinalityString,
+	},
+	{
+		Dbs:         []string{"ext_metrics"},
+		Tables:      []string{"metrics", "metrics_local"},
+		ColumnNames: []string{"host"},
+		ColumnType:  ckdb.LowCardinalityString,
 	},
 }

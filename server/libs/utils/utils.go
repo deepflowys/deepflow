@@ -524,3 +524,12 @@ func EscapeJsonString(str string) string {
 func CloneStringSlice(strs []string) []string {
 	return append([]string{}, strs...)
 }
+
+func IndexOf(strs []string, str string) int {
+	for i, v := range strs {
+		if v == str {
+			return i
+		}
+	}
+	return -1
+}
