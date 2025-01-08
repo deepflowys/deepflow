@@ -559,13 +559,12 @@ impl<'a> MetaPacket<'a> {
 
     fn update_fields(
         &mut self,
-        raw_packet: &[u8],
+        packet: &[u8],
         src_endpoint: bool,
         dst_endpoint: bool,
         timestamp: Duration,
         original_length: usize,
     ) -> error::Result<()> {
-        let packet: &[u8] = raw_packet.as_ref();
         self.lookup_key.timestamp = timestamp.into();
         self.lookup_key.l2_end_0 = src_endpoint;
         self.lookup_key.l2_end_1 = dst_endpoint;

@@ -412,25 +412,24 @@ impl ZmtpLog {
         let (payload, length) = parse_byte(payload).ok_or(Error::ZmtpLogParseFailed)?;
         // Due to a libzmq bug, "\x05ERROR" is treated as "\x5e" "RROR",
         // so we process it as an exceptional case.
-        let payload =
-            if length == 0x5e && payload.get(0..4) == Some(b"RROR").map(|arr| arr as &[u8]) {
-                info.command_name = Some("ERROR".to_string());
-                &payload[4..]
-            } else {
-                // Currently, the shortest command names are "PING", "PONG",
-                // and "JOIN" with the length of 4.
-                if length < 4 {
-                    return Err(Error::ZmtpLogParseFailed);
-                }
-                let (payload, command_name) =
-                    parse_bytes(payload, length as usize).ok_or(Error::ZmtpLogParseFailed)?;
-                // only allow uppercase ASCII characters
-                if !command_name.iter().all(|&x| x.is_ascii_uppercase()) {
-                    return Err(Error::ZmtpLogParseFailed);
-                }
-                info.command_name = Some(String::from_utf8_lossy(command_name).to_string());
-                payload
-            };
+        let payload = if length == 0x5e && payload.get(0..4) == Some(b"RROR".as_ref()) {
+            info.command_name = Some("ERROR".to_string());
+            &payload[4..]
+        } else {
+            // Currently, the shortest command names are "PING", "PONG",
+            // and "JOIN" with the length of 4.
+            if length < 4 {
+                return Err(Error::ZmtpLogParseFailed);
+            }
+            let (payload, command_name) =
+                parse_bytes(payload, length as usize).ok_or(Error::ZmtpLogParseFailed)?;
+            // only allow uppercase ASCII characters
+            if !command_name.iter().all(|&x| x.is_ascii_uppercase()) {
+                return Err(Error::ZmtpLogParseFailed);
+            }
+            info.command_name = Some(String::from_utf8_lossy(command_name).to_string());
+            payload
+        };
         if info.command_name.as_ref().unwrap() == "ERROR" {
             info.status = L7ResponseStatus::ClientError;
             // error message
