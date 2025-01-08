@@ -63,7 +63,6 @@ impl ProcessAllocInfo {
         stacks: &mut HashMap<u32, metric::Profile>,
         data: &ebpf::stack_profile_data,
         update_trace_str: bool,
-        stack_compression: bool,
     ) {
         let entry = stacks.entry(data.u_stack_id).or_insert_with(|| {
             let mut profile = metric::Profile::default();
@@ -78,20 +77,7 @@ impl ProcessAllocInfo {
             profile.wide_count = 0;
             let profile_data =
                 slice::from_raw_parts(data.stack_data as *mut u8, data.stack_data_len as usize);
-            if stack_compression {
-                match compress(&profile_data, 0) {
-                    Ok(compressed_data) => {
-                        profile.data_compressed = true;
-                        profile.data = compressed_data;
-                    }
-                    Err(e) => {
-                        profile_data.to_vec();
-                        debug!("failed to compress ebpf memory profile: {:?}", e);
-                    }
-                }
-            } else {
-                profile.data = profile_data.to_vec();
-            }
+            profile.data = profile_data.to_vec();
 
             let container_id =
                 CStr::from_ptr(data.container_id.as_ptr() as *const libc::c_char).to_string_lossy();
@@ -110,7 +96,7 @@ impl ProcessAllocInfo {
         }
     }
 
-    unsafe fn update(&mut self, data: &ebpf::stack_profile_data, stack_compression: bool) {
+    unsafe fn update(&mut self, data: &ebpf::stack_profile_data) {
         // Memory allocations and frees may come in any order in a multi-core envrionment.
         // Make best effort to handle such situation.
         if data.count == 0 {
@@ -143,7 +129,7 @@ impl ProcessAllocInfo {
             }
         } else {
             // allocs
-            Self::update_stack(&mut self.alloc, data, false, stack_compression);
+            Self::update_stack(&mut self.alloc, data, false);
             // for languages without free (i.e. JAVA), not recording in_use info, only allocs
             if data.mem_addr == 0 {
                 return;
@@ -164,7 +150,7 @@ impl ProcessAllocInfo {
                         stack_id: data.u_stack_id,
                         size: data.count,
                     });
-                    Self::update_stack(&mut self.in_use, data, true, stack_compression);
+                    Self::update_stack(&mut self.in_use, data, true);
                 }
             } else {
                 self.allocated_addrs.insert(
@@ -177,7 +163,7 @@ impl ProcessAllocInfo {
                         frees: 0,
                     },
                 );
-                Self::update_stack(&mut self.in_use, data, true, stack_compression);
+                Self::update_stack(&mut self.in_use, data, true);
             }
         }
     }
@@ -216,7 +202,7 @@ impl MemoryContext {
         self.processes
             .entry(data.pid)
             .or_insert(Default::default())
-            .update(data, self.stack_compression);
+            .update(data);
     }
 
     pub fn report(&mut self, timestamp: Duration, sender: &mut DebugSender<Profile>) {
@@ -272,6 +258,17 @@ impl MemoryContext {
                 p.event_type = metric::ProfileEventType::EbpfMemAlloc.into();
                 p.timestamp = (timestamp - report_interval).as_nanos() as u64;
                 p.count = p.wide_count as u32;
+                if self.stack_compression {
+                    match compress(&p.data, 0) {
+                        Ok(compressed_data) => {
+                            p.data_compressed = true;
+                            p.data = compressed_data;
+                        }
+                        Err(e) => {
+                            debug!("failed to compress ebpf memory profile: {:?}", e);
+                        }
+                    }
+                }
                 batch.push(Profile(p));
             }
 
@@ -288,6 +285,17 @@ impl MemoryContext {
                 p.event_type = metric::ProfileEventType::EbpfMemInUse.into();
                 p.timestamp = (timestamp - report_interval).as_nanos() as u64;
                 p.count = p.wide_count as u32;
+                if self.stack_compression {
+                    match compress(&p.data, 0) {
+                        Ok(compressed_data) => {
+                            p.data_compressed = true;
+                            p.data = compressed_data;
+                        }
+                        Err(e) => {
+                            debug!("failed to compress ebpf memory profile: {:?}", e);
+                        }
+                    }
+                }
                 batch.push(Profile(p));
             }
         }
