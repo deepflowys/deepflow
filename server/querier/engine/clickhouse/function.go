@@ -149,14 +149,14 @@ func TransMultiTag(isMulti bool, field string, dbFields []string, withs []view.N
 		deviceTypeSuffix := "l3_device_type" + suffix
 		deviceIDSuffix := "l3_device_id" + suffix
 		// auto
-		for _, resourceName := range []string{"resource_gl0", "auto_instance", "resource_gl1", "resource_gl2", "auto_service"} {
+		for _, resourceName := range []string{"auto_instance", "auto_service"} {
 			if field == resourceName+suffix {
 				isMulti = true
 				resourceTypeSuffix := "auto_service_type" + suffix
 				resourceIDSuffix := "auto_service_id" + suffix
 				ip4Alias := "auto_service_ip4" + suffix
 				ip6Alias := "auto_service_ip6" + suffix
-				if common.IsValueInSliceString(resourceName, []string{"resource_gl0", "auto_instance"}) {
+				if resourceName == "auto_instance" {
 					resourceTypeSuffix = "auto_instance_type" + suffix
 					resourceIDSuffix = "auto_instance_id" + suffix
 					ip4Alias = "auto_instance_ip4" + suffix

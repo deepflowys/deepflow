@@ -52,7 +52,7 @@ var TAG_RESOURCE_TYPE_DEFAULT = []string{
 	"region", "az", "pod_node", "pod_ns",
 	"pod_group", "pod", "pod_cluster", "subnet", "gprocess",
 }
-var TAG_RESOURCE_TYPE_AUTO = []string{"resource_gl0", "resource_gl1", "resource_gl2", "auto_instance", "auto_service"}
+var TAG_RESOURCE_TYPE_AUTO = []string{"auto_instance", "auto_service"}
 
 var AutoMap = map[string]int{
 	"chost":       VIF_DEVICE_TYPE_VM,

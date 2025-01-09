@@ -144,7 +144,7 @@ func TransWhereTagFunction(db, table string, name string, args []string) (filter
 		} else if resourceNoID == "l2_vpc" {
 			filter = strings.Join([]string{"epc_id", suffix, "!=0"}, "")
 		} else if common.IsValueInSliceString(resourceNoID, tag.TAG_RESOURCE_TYPE_AUTO) {
-			if common.IsValueInSliceString(resourceNoID, []string{"resource_gl0", "auto_instance"}) {
+			if resourceNoID == "auto_instance" {
 				filter = strings.Join([]string{"auto_instance_type", suffix, " not in (101,102)"}, "")
 			} else {
 				filter = strings.Join([]string{"auto_service_type", suffix, " not in (10)"}, "")
@@ -761,7 +761,7 @@ func (t *WhereTag) Trans(expr sqlparser.Expr, w *Where, e *CHEngine) (view.Node,
 			switch noIDTag {
 			case "service", "chost", "router", "dhcpgw", "redis", "rds", "lb_listener", "natgw", "lb", "host", "pod_node", "region", "az",
 				"pod_ns", "pod_group", "pod", "pod_cluster", "subnet", "gprocess", "pod_ingress", "pod_service", "ip", "vpc", "l2_vpc",
-				"resource_gl0", "resource_gl1", "resource_gl2", "auto_instance", "auto_service", "auto_instance_type", "auto_service_type":
+				"auto_instance", "auto_service", "auto_instance_type", "auto_service_type":
 				if !strings.HasSuffix(strings.Trim(t.Tag, "`"), "_0") && !strings.HasSuffix(strings.Trim(t.Tag, "`"), "_1") {
 					filter = TransAlertEventNoSuffixFilter(tagItem.WhereTranslator, tagItem.WhereRegexpTranslator, op, t.Value)
 				} else {
@@ -1087,7 +1087,7 @@ func (t *WhereTag) Trans(expr sqlparser.Expr, w *Where, e *CHEngine) (view.Node,
 				whereFilter = TransChostFilter(tagItem.WhereTranslator, tagItem.WhereRegexpTranslator, op, t.Value)
 			case "pod_ingress", "x_request_id", "syscall_thread", "syscall_coroutine", "syscall_cap_seq", "syscall_trace_id", "tcp_seq":
 				whereFilter = TransIngressFilter(tagItem.WhereTranslator, tagItem.WhereRegexpTranslator, op, t.Value)
-			case "resource_gl0", "resource_gl1", "resource_gl2", "auto_instance", "auto_service":
+			case "auto_instance", "auto_service":
 				if strings.Contains(op, "match") {
 					whereFilter = fmt.Sprintf(tagItem.WhereRegexpTranslator, op, t.Value, op, t.Value)
 				} else {

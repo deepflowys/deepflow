@@ -23,12 +23,6 @@ pod_group_type             , pod_group_type            , pod_group_type         
 pod_group                  , pod_group                 , pod_group                 , resource      ,                       , Universal Tag   , 111           , 0
 pod                        , pod                       , pod                       , resource      ,                       , Universal Tag   , 111           , 0
 service                    , service                   , service                   , resource      ,                       , Universal Tag   , 111           , 1
-resource_gl0_type          , resource_gl0_type         , resource_gl0_type         , int_enum      , resource_gl0_type     , Universal Tag   , 111           , 1
-resource_gl0               , resource_gl0              , resource_gl0              , resource      ,                       , Universal Tag   , 111           , 1
-resource_gl1_type          , resource_gl1_type         , resource_gl1_type         , int_enum      , resource_gl1_type     , Universal Tag   , 111           , 1
-resource_gl1               , resource_gl1              , resource_gl1              , resource      ,                       , Universal Tag   , 111           , 1
-resource_gl2_type          , resource_gl2_type         , resource_gl2_type         , int_enum      , resource_gl2_type     , Universal Tag   , 111           , 1
-resource_gl2               , resource_gl2              , resource_gl2              , resource      ,                       , Universal Tag   , 111           , 1
 auto_instance_type         , auto_instance_type        , auto_instance_type        , int_enum      , auto_instance_type    , Universal Tag   , 111           , 0
 auto_instance              , auto_instance             , auto_instance             , resource      ,                       , Universal Tag   , 111           , 0
 auto_service_type          , auto_service_type         , auto_service_type         , int_enum      , auto_service_type     , Universal Tag   , 111           , 0

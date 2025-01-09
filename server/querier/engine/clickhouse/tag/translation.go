@@ -61,7 +61,7 @@ var HOSTNAME_IP_DEVICE_MAP = map[string]struct {
 }
 
 var INT_ENUM_TAG = []string{"close_type", "eth_type", "signal_source", "is_ipv4", "l7_ip_protocol", "type", "l7_protocol", "protocol", "response_status", "server_port", "status", "capture_nic_type", "tunnel_tier", "tunnel_type", "instance_type", "nat_source", "role", "event_level", "policy_level", "policy_app_type", "is_tls", "severity_number"}
-var INT_ENUM_PEER_TAG = []string{"resource_gl0_type", "resource_gl1_type", "resource_gl2_type", "tcp_flags_bit", "auto_instance_type", "auto_service_type"}
+var INT_ENUM_PEER_TAG = []string{"tcp_flags_bit", "auto_instance_type", "auto_service_type"}
 var STRING_ENUM_TAG = []string{"observation_point", "event_type", "profile_language_type"}
 
 func GenerateTagResoureMap() map[string]map[string]*Tag {
@@ -396,7 +396,7 @@ func GenerateTagResoureMap() map[string]map[string]*Tag {
 			ip6Suffix := "ip6" + suffix
 			autoIP4Suffix := "auto_service_ip4" + suffix
 			autoIP6Suffix := "auto_service_ip6" + suffix
-			if common.IsValueInSliceString(autoStr, []string{"resource_gl0", "auto_instance"}) {
+			if autoStr == "auto_instance" {
 				autoTypeSuffix = "auto_instance_type" + suffix
 				autoIDSuffix = "auto_instance_id" + suffix
 				autoIP4Suffix = "auto_instance_ip4" + suffix
@@ -1085,11 +1085,6 @@ func GenerateTagResoureMap() map[string]map[string]*Tag {
 		for _, suffix := range []string{"", "_0", "_1"} {
 			tagEnumNameSuffix := enumName + suffix
 			enumNameSuffix := enumName + suffix
-			if common.IsValueInSliceString(enumName, []string{"resource_gl0_type", "auto_instance_type"}) {
-				enumNameSuffix = "auto_instance_type" + suffix
-			} else if common.IsValueInSliceString(enumName, []string{"resource_gl1_type", "resource_gl2_type", "auto_service_type"}) {
-				enumNameSuffix = "auto_service_type" + suffix
-			}
 			_, ok := tagResourceMap[tagEnumNameSuffix]
 			if ok {
 				tagResourceMap[tagEnumNameSuffix]["enum"] = NewTag(
@@ -1902,7 +1897,7 @@ func GenerateAlarmEventTagResoureMap() map[string]map[string]*Tag {
 			tagAutoTypeSuffix := autoStr + "_type" + suffix
 			autoIDSuffix := "auto_service_id" + suffix
 			autoTypeSuffix := "auto_service_type" + suffix
-			if common.IsValueInSliceString(autoStr, []string{"resource_gl0", "auto_instance"}) {
+			if autoStr == "auto_instance" {
 				autoTypeSuffix = "auto_instance_type" + suffix
 				autoIDSuffix = "auto_instance_id" + suffix
 			}

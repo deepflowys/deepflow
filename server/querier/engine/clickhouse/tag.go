@@ -39,12 +39,12 @@ func GetMultiTag(stmts []Statement, name string) []Statement {
 		ip6Suffix := "ip6" + suffix
 		deviceTypeSuffix := "l3_device_type" + suffix
 		// auto
-		for _, resourceName := range []string{"resource_gl0", "auto_instance", "resource_gl1", "resource_gl2", "auto_service"} {
+		for _, resourceName := range []string{"auto_instance", "auto_service"} {
 			if name == resourceName+suffix {
 				resourceTypeSuffix := "auto_service_type" + suffix
 				ip4Alias := "auto_service_ip4" + suffix
 				ip6Alias := "auto_service_ip6" + suffix
-				if common.IsValueInSliceString(resourceName, []string{"resource_gl0", "auto_instance"}) {
+				if resourceName == "auto_instance" {
 					resourceTypeSuffix = "auto_instance_type" + suffix
 					ip4Alias = "auto_instance_ip4" + suffix
 					ip6Alias = "auto_instance_ip6" + suffix

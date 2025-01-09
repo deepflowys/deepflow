@@ -26,12 +26,6 @@ pod_group_type            , K8s Workload Type             ,
 pod_group                 , K8s Workload                  , Such as Deployment, StatefulSet, Daemonset, etc.
 pod                       , K8s POD                       ,
 service                   , Service                       , Deprecated，please use pod_service
-resource_gl0_type         , Type - K8s POD First          , Deprecated，please use auto_instance_type.
-resource_gl0              , Instance - K8s POD First      , Deprecated，please use auto_instance.
-resource_gl1_type         , Type - K8s Workload First     , Deprecated，please use auto_service_type.
-resource_gl1              , Instance - K8s Workload First , Deprecated，please use auto_service.
-resource_gl2_type         , Type - K8s Service First      , Deprecated，please use auto_service_type.
-resource_gl2              , Instance - K8s Service First  , Deprecated，please use auto_service.
 auto_instance_type        , Type - K8s POD First          , The type of 'auto_instance'.
 auto_instance             , Instance - K8s POD First      , The instance of IP, when the instance is an IP, auto_instance_id displayed as a subnet ID.
 auto_service_type         , Type - K8s Service First      , The type of 'auto_service'.

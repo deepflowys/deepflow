@@ -377,15 +377,12 @@ func LoadTagDescriptions(tagData map[string]interface{}) error {
 							AUTO_CUSTOM_TAG_MAP[tagNameSuffix] = append(AUTO_CUSTOM_TAG_MAP[tagNameSuffix], tagValue+suffix)
 							// Used to check if the tags in the auto group tags are not duplicated with the tags in the auto custom tags
 							switch tagValue {
-							case "auto_instance", "auto_service", "resource_gl0", "resource_gl1", "resource_gl2":
+							case "auto_instance", "auto_service":
 								for deviceName, _ := range AutoMap {
 									AUTO_CUSTOM_TAG_CHECK_MAP[tagValue] = append(AUTO_CUSTOM_TAG_CHECK_MAP[tagValue], deviceName+suffix)
 								}
 								autoMap := map[string]map[string]int{
-									"resource_gl0":  AutoPodMap,
 									"auto_instance": AutoPodMap,
-									"resource_gl1":  AutoServiceMap,
-									"resource_gl2":  AutoServiceMap,
 									"auto_service":  AutoServiceMap,
 								}
 								for deviceName, _ := range autoMap[tagValue] {
@@ -403,12 +400,12 @@ func LoadTagDescriptions(tagData map[string]interface{}) error {
 									ipTagTranslator := fmt.Sprintf("if(is_ipv4=1, IPv4NumToString(%s), IPv6NumToString(%s))", ip4Suffix, ip6Suffix)
 									iconIDTranslator = fmt.Sprintf("%s, %s", ipTagTranslator+"!=''", "dictGet('flow_tag.device_map', 'icon_id', (toUInt64(64000),toUInt64(64000)))")
 									nodeTypeTranslator = fmt.Sprintf("%s, '%s'", ipTagTranslator+"!=''", tagValue)
-								case "auto_instance", "auto_service", "resource_gl0", "resource_gl1", "resource_gl2":
+								case "auto_instance", "auto_service":
 									tagAutoIDSuffix := tagValue + "_id" + suffix
 									tagAutoTypeSuffix := tagValue + "_type" + suffix
 									autoIDSuffix := "auto_service_id" + suffix
 									autoTypeSuffix := "auto_service_type" + suffix
-									if common.IsValueInSliceString(tagValue, []string{"resource_gl0", "auto_instance"}) {
+									if tagValue == "auto_instance" {
 										autoTypeSuffix = "auto_instance_type" + suffix
 										autoIDSuffix = "auto_instance_id" + suffix
 									}
@@ -557,12 +554,12 @@ func LoadTagDescriptions(tagData map[string]interface{}) error {
 									AlarmEventResourceMap[tagNameSuffix]["default"].TagTranslatorMap[tagValueName] = "tag_string_values[indexOf(tag_string_names,'" + tagValueName + "')]"
 									iconIDTranslator += fmt.Sprintf(", %s, %s", ipTagTranslator+"!=''", "dictGet('flow_tag.device_map', 'icon_id', (toUInt64(64000),toUInt64(64000)))")
 									nodeTypeTranslator += fmt.Sprintf(", %s, '%s'", ipTagTranslator+"!=''", tagValue)
-								case "auto_instance", "auto_service", "resource_gl0", "resource_gl1", "resource_gl2":
+								case "auto_instance", "auto_service":
 									tagAutoIDSuffix := tagValue + "_id" + suffix
 									tagAutoTypeSuffix := tagValue + "_type" + suffix
 									autoIDSuffix := "auto_service_id" + suffix
 									autoTypeSuffix := "auto_service_type" + suffix
-									if common.IsValueInSliceString(tagValue, []string{"resource_gl0", "auto_instance"}) {
+									if tagValue == "auto_instance" {
 										autoTypeSuffix = "auto_instance_type" + suffix
 										autoIDSuffix = "auto_instance_id" + suffix
 									}
@@ -1434,10 +1431,7 @@ func GetTagResourceValues(db, table, rawSql string) (*common.Result, []string, e
 			autoDeviceTypes = append(autoDeviceTypes, strconv.Itoa(deviceType))
 		}
 		autoMap := map[string]map[string]int{
-			"resource_gl0":  AutoPodMap,
 			"auto_instance": AutoPodMap,
-			"resource_gl1":  AutoServiceMap,
-			"resource_gl2":  AutoServiceMap,
 			"auto_service":  AutoServiceMap,
 		}
 		for _, deviceType := range autoMap[tag] {
