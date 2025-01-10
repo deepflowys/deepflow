@@ -2399,6 +2399,7 @@ impl ConfigHandler {
     fn set_log_retention(
         logger_handle: &mut Option<LoggerHandle>,
         log_retention: &Duration,
+        current_file_size_mb: u32,
         log_file: &String,
     ) -> bool {
         let log_retention = (log_retention.as_secs() / 3600 / 24).min(1);
@@ -2411,14 +2412,17 @@ impl ConfigHandler {
                 _ => match h.reset_flw(
                     &FileLogWriter::builder(FileSpec::try_from(log_file).unwrap())
                         .rotate(
-                            Criterion::Age(Age::Day),
+                            Criterion::AgeOrSize(Age::Day, (current_file_size_mb as u64) << 20),
                             Naming::Timestamps,
                             Cleanup::KeepLogFiles(log_retention as usize),
                         )
                         .create_symlink(log_file)
                         .append(),
                 ) {
-                    Ok(_) => true,
+                    Ok(_) => {
+                        info!("updated logger settings to log_retention: {:?}, current_file_size: {}M", log_retention, current_file_size_mb);
+                        true
+                    }
                     Err(e) => {
                         warn!("failed to set log_retention: {}", e);
                         false
@@ -3709,15 +3713,33 @@ impl ConfigHandler {
 
         let limits = &mut config.global.limits;
         let new_limits = &mut new_config.user_config.global.limits;
-        if limits.local_log_retention != new_limits.local_log_retention {
-            info!(
-                "Update global.limits.local_log_retention from {:?} to {:?}.",
-                limits.local_log_retention, new_limits.local_log_retention
-            );
-            if Self::set_log_retention(logger_handle, &new_limits.local_log_retention, &log_file) {
+        if limits.local_log_retention != new_limits.local_log_retention
+            || limits.local_log_current_file_size_mb != new_limits.local_log_current_file_size_mb
+        {
+            if limits.local_log_retention != new_limits.local_log_retention {
+                info!(
+                    "Update global.limits.local_log_retention from {:?} to {:?}.",
+                    limits.local_log_retention, new_limits.local_log_retention
+                );
+            }
+            if limits.local_log_current_file_size_mb != new_limits.local_log_current_file_size_mb {
+                info!(
+                    "Update global.limits.local_log_current_file_size from {:?} to {:?}.",
+                    limits.local_log_current_file_size_mb,
+                    new_limits.local_log_current_file_size_mb
+                );
+            }
+            if Self::set_log_retention(
+                logger_handle,
+                &new_limits.local_log_retention,
+                new_limits.local_log_current_file_size_mb,
+                &log_file,
+            ) {
                 limits.local_log_retention = new_limits.local_log_retention;
+                limits.local_log_current_file_size_mb = new_limits.local_log_current_file_size_mb;
             } else {
                 new_limits.local_log_retention = limits.local_log_retention;
+                new_limits.local_log_current_file_size_mb = limits.local_log_current_file_size_mb;
             }
         }
         if limits.max_local_log_file_size != new_limits.max_local_log_file_size {

@@ -66,6 +66,7 @@ use crate::{
     },
     config::PcapStream,
     config::{
+        config,
         handler::{ConfigHandler, DispatcherConfig, ModuleConfig},
         Config, ConfigError, DpdkSource, UserConfig,
     },
@@ -522,7 +523,10 @@ impl Trident {
                     Box::new(LogWriterAdapter::new(logger_writers)),
                 )
                 .rotate(
-                    Criterion::Age(Age::Day),
+                    Criterion::AgeOrSize(
+                        Age::Day,
+                        (config::Limits::default().local_log_current_file_size_mb as u64) << 20,
+                    ),
                     Naming::Timestamps,
                     Cleanup::KeepLogFiles(DEFAULT_LOG_RETENTION as usize),
                 )

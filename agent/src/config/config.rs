@@ -1851,6 +1851,8 @@ pub struct Limits {
     pub max_local_log_file_size: u32,
     #[serde(with = "humantime_serde")]
     pub local_log_retention: Duration,
+    #[serde(rename = "local_log_current_file_size")]
+    pub local_log_current_file_size_mb: u32,
 }
 
 impl Default for Limits {
@@ -1861,6 +1863,7 @@ impl Default for Limits {
             max_log_backhaul_rate: 300,
             max_local_log_file_size: 1000 << 20,
             local_log_retention: Duration::from_secs(300 * 24 * 3600),
+            local_log_current_file_size_mb: 25,
         }
     }
 }

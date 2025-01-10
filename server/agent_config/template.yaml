@@ -94,6 +94,24 @@ global:
     #     用于 deepflow-agent 控制自身运行日志在本地的留存时长。
     # upgrade_from: log_retention
     local_log_retention: 300d
+    # type: int
+    # name:
+    #   en: Local Log Current File Size
+    #   ch: 本地日志当前文件大小上限
+    # unit: MiB
+    # range: [1, 1000]
+    # enum_options: []
+    # modification: hot_update
+    # ee_feature: false
+    # description:
+    #   en: |-
+    #     The maximum disk space allowed for deepflow-agent current log file.
+    #     Agent will rotate log file when the size of current log file reaches this value.
+    #   ch: |-
+    #     Deepflow-agent 当前写入日志文件的最大尺寸。
+    #     Deepflow-agent 在当前日志文件达到此尺寸时，将切换到下一个日志文件。
+    # upgrade_from: static_config.log-current-file-size
+    local_log_current_file_size: 25
   # type: section
   # name:
   #   en: Alerts

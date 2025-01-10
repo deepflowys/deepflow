@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-mod config;
+pub(crate) mod config;
 pub mod handler;
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
