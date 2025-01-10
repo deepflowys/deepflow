@@ -1,5 +1,5 @@
 # Value , DisplayName           , Description
-0       , 未知                  ,
+0       , 其他                  ,
 1       , 正常结束              ,
 5       , 周期性上报            ,
 13      , 建连-客户端端口复用   ,
