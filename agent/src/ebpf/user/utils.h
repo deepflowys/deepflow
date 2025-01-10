@@ -23,6 +23,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <sys/utsname.h>
+#include <linux/ethtool.h>
 #include "types.h"
 #include "clib.h"
 #include "log.h"
@@ -49,23 +51,6 @@
 #define MAX_PATH_LENGTH 1024
 #define CONTAINER_ID_SIZE 65
 
-struct sysinfo {
-	long uptime;
-	unsigned long loads[3];
-	unsigned long totalram;
-	unsigned long freeram;
-	unsigned long sharedram;
-	unsigned long bufferram;
-	unsigned long totalswap;
-	unsigned long freeswap;
-	uint16_t procs;
-	uint16_t pad;
-	unsigned long totalhigh;
-	unsigned long freehigh;
-	uint32_t mem_unit;
-	char _f[20 - 2 * sizeof(unsigned long) - sizeof(uint32_t)];
-};
-
 extern int sysinfo(struct sysinfo *__info);
 
 #ifndef likely
@@ -88,6 +73,37 @@ do {				\
 	free((void *)(P));      \
 	P = NULL;	        \
 } while(0)
+
+#define MAX_NIC_NAME_LEN 64
+
+#ifndef MAX_PATH_LEN
+#define MAX_PATH_LEN 256
+#endif
+
+/**
+ * @struct cpu_balancer_nic
+ * @brief Structure to hold Network Interface Card (NIC) information for CPU balancing.
+ */
+struct nic_info_s {
+	char name[MAX_NIC_NAME_LEN];	/**< Network Interface Card (NIC) name. */
+	char pci_device_address[MAX_PATH_LEN];
+					   /**< PCI device address of the NIC. */
+	char driver[MAX_PATH_LEN];	/**< Driver name associated with the NIC. */
+	int rx_channels;		/**< Number of NIC receive (RX) channels. */
+	int tx_channels;		/**< Number of NIC transmit (TX) channels. */
+	size_t rx_ring_size;		/**< Size of the receive ring buffer. */
+	size_t tx_ring_size;		/**< Size of the transmit ring buffer. */
+	int promisc;			/**< Flag indicating if promiscuous mode is enabled in the NIC configuration. */
+	int numa_node;			/**< NUMA node number to which the NIC is associated. */
+	char *nic_cpus;			/**< 
+                             * List of CPUs handling network data received by the NIC, 
+                             * triggered by a physical interrupt.
+                             */
+	char *xdp_cpus;			/**< 
+                             * List of CPUs used for XDP (eXpress Data Path) processing. 
+                             * Ensures there is no overlap with nic_cpus.
+                             */
+};
 
 static_always_inline void safe_buf_copy(void *dst, int dst_len,
 					void *src, int src_len)
@@ -116,7 +132,7 @@ static inline void __pause(void)
 #elif defined(__aarch64__)
 static inline void __pause(void)
 {
-	asm volatile("yield" ::: "memory");
+	asm volatile ("yield":::"memory");
 }
 #else
 _Pragma("GCC error \"__pause()\"");
@@ -160,7 +176,7 @@ enum {
 	ETR_PROC_FAIL = -27,	/* procfs failed */
 	ETR_NOHANDLE = -28,	/* not find event handle */
 	ETR_LOAD = -29,		/* bpf programe load failed */
-	ETR_EPOLL = -30,         /* epoll error */
+	ETR_EPOLL = -30,	/* epoll error */
 
 	/* positive code for non-error */
 	ETR_INPROGRESS = 2,	/* in progress */
@@ -219,10 +235,10 @@ static inline const char *trace_strerror(int err)
 
 #define RUN_ONCE(condition, f, arg) ({    \
   int __ret_warn_once = !!(condition);    \
-                                          \
+                                    \
   if (unlikely(__ret_warn_once)) {        \
-          f(arg);                         \
-          condition = !(__ret_warn_once); \
+    f(arg);                         \
+    condition = !(__ret_warn_once); \
   }                                       \
 })
 
@@ -254,7 +270,7 @@ static inline int64_t get_sysboot_time_ns(void)
 }
 
 bool is_core_kernel(void);
-int get_cpus_count(bool **mask);
+int get_cpus_count(bool ** mask);
 void clear_residual_probes();
 int max_locked_memory_set_unlimited(void);
 int sysfs_write(const char *file_name, char *v);
@@ -276,9 +292,7 @@ char *gen_timestamp_prefix(void);
 char *gen_timestamp_str(u64 ns);
 int fetch_system_type(const char *sys_type, int type_len);
 void fetch_linux_release(const char *buf, int buf_len);
-u64 get_process_starttime_and_comm(pid_t pid,
-				   char *name_base,
-				   int len);
+u64 get_process_starttime_and_comm(pid_t pid, char *name_base, int len);
 u32 legacy_fetch_log2_page_size(void);
 u64 get_netns_id_from_pid(pid_t pid);
 bool check_netns_enabled(void);
@@ -288,12 +302,13 @@ int copy_file(const char *src_file, const char *dest_file);
 int df_enter_ns(int pid, const char *type, int *self_fd);
 void df_exit_ns(int fd);
 int gen_file_from_mem(const char *mem_ptr, int write_bytes, const char *path);
-int exec_command(const char *cmd, const char *args, char *ret_buf, int ret_buf_size);
+int exec_command(const char *cmd, const char *args, char *ret_buf,
+		 int ret_buf_size);
 u64 current_sys_time_secs(void);
 int fetch_container_id_from_str(char *buff, char *id, int copy_bytes);
 int fetch_container_id(pid_t pid, char *id, int copy_bytes);
 int parse_num_range(const char *config_str, int bytes_count,
-		    bool **mask, int *count);
+		    bool ** mask, int *count);
 int parse_num_range_disorder(const char *config_str,
 			     int bytes_count, bool ** mask);
 int generate_random_integer(int max_value);
@@ -313,6 +328,201 @@ char *get_timestamp_from_us(u64 microseconds);
 int find_pid_by_name(const char *process_name, int exclude_pid);
 u32 djb2_32bit(const char *str);
 #if !defined(AARCH64_MUSL) && !defined(JAVA_AGENT_ATTACH_TOOL)
-int create_work_thread(const char *name, pthread_t *t, void *fn, void *arg);
+int create_work_thread(const char *name, pthread_t * t, void *fn, void *arg);
 #endif /* !defined(AARCH64_MUSL) && !defined(JAVA_AGENT_ATTACH_TOOL) */
+
+/**
+ * @brief Removes leading and trailing whitespace from a string.
+ *
+ * This function modifies the input string in place by removing all leading and 
+ * trailing whitespace characters. The trimmed string starts at the first 
+ * non-whitespace character and ends at the last non-whitespace character.
+ *
+ * @param[in,out] str A pointer to the input string to be trimmed. 
+ *                    The string must be null-terminated and modifiable.
+ *
+ * @return char* Returns a pointer to the trimmed string. If the string is empty 
+ *               or contains only whitespace, the function returns a pointer 
+ *               to the null terminator (`'\0'`).
+ *
+ * @note This function operates directly on the input string and does not allocate
+ *       any new memory. Ensure the input string is writable to avoid undefined behavior.
+ *
+ * @example
+ * char str[] = "   Hello, World!   ";
+ * char *trimmed = trim(str);
+ * printf("'%s'\n", trimmed); // Output: 'Hello, World!'
+ */
+char *trim(char *str);
+
+/**
+ * @brief Retrieves the PCI device address and driver name for a given NIC name.
+ *
+ * This function queries the system to find the PCI device address, driver name,
+ * and NUMA node associated with a specified network interface card (NIC) name.
+ *
+ * @param[in] nic_name The name of the network interface card (e.g., "eth0").
+ * @param[out] pci_device_address A buffer to store the retrieved PCI device address (e.g., "0000:03:00.0").
+ *                                The buffer should be preallocated by the caller.
+ * @param[out] driver A buffer to store the name of the driver associated with the NIC.
+ *                    The buffer should be preallocated by the caller.
+ * @param[out] numa_node A pointer to an integer to store the NUMA node ID associated with the NIC.
+ * 
+ * @return int Returns 0 on success, or a negative error code on failure.
+ *             Possible error codes:
+ *             - -1: NIC not found.
+ *
+ * @note Ensure that the buffers `pci_device_address` and `driver` are large enough
+ *       to hold the respective information to avoid buffer overflows.
+ * @note This function may require root privileges or CAP_NET_ADMIN capabilities
+ *       to access the necessary system files or interfaces.
+ */
+int retrieve_pci_info_by_nic(const char *nic_name, char *pci_device_address,
+			     char *driver, int *numa_node);
+
+/**
+ * @brief Retrieves the number of RX and TX channels for a specified NIC.
+ *
+ * This function inspects the system's `/sys/class/net/<nic_name>/queues` directory 
+ * to determine the number of receive (RX) and transmit (TX) channels configured 
+ * for the given network interface card (NIC).
+ *
+ * @param[in] nic_name The name of the network interface card (e.g., "eth0").
+ * @param[out] rx_channels A pointer to an integer where the count of RX channels will be stored.
+ * @param[out] tx_channels A pointer to an integer where the count of TX channels will be stored.
+ *
+ * @return int Returns 0 on success, or -1 on failure.
+ *             - If the directory `/sys/class/net/<nic_name>/queues` cannot be opened, 
+ *               an error message is logged, and -1 is returned.
+ *
+ * @note The function directly modifies the values pointed to by `rx_channels` and 
+ *       `tx_channels`, so ensure these pointers are valid.
+ * @note Root privileges or sufficient permissions may be required to access the 
+ *       `/sys/class/net/<nic_name>/queues` directory.
+ *
+ * @example
+ * int rx = 0, tx = 0;
+ * if (get_nic_channels("eth0", &rx, &tx) == 0) {
+ *     printf("RX channels: %d, TX channels: %d\n", rx, tx);
+ * } else {
+ *     printf("Failed to retrieve NIC channel information.\n");
+ * }
+ */
+int get_nic_channels(const char *nic_name, int *rx_channels, int *tx_channels);
+
+/**
+ * @brief Retrieves the RX and TX ring sizes for a specified network interface.
+ *
+ * This function queries the kernel for the receive (RX) and transmit (TX) 
+ * ring buffer sizes of a given network interface card (NIC) using the 
+ * `ETHTOOL_GRINGPARAM` ioctl command.
+ *
+ * @param[in] nic_name The name of the network interface card (e.g., "eth0").
+ * @param[out] rx_sz Pointer to store the size of the RX ring buffer.
+ *                   Will be set to -1 if an error occurs.
+ * @param[out] tx_sz Pointer to store the size of the TX ring buffer.
+ *                   Will be set to -1 if an error occurs.
+ *
+ * @return int Returns:
+ *             - 0 on success, with `rx_sz` and `tx_sz` updated to the
+ *               respective ring sizes.
+ *             - -1 on failure, with `rx_sz` and `tx_sz` set to -1.
+ *
+ * @note This function requires sufficient privileges (e.g., root) to access 
+ *       NIC parameters.
+ *
+ * @example
+ * // Retrieve RX and TX ring sizes for "eth0"
+ * size_t rx_size, tx_size;
+ * if (get_nic_ring_size("eth0", &rx_size, &tx_size) == 0) {
+ *     printf("RX ring size: %zu, TX ring size: %zu\n", rx_size, tx_size);
+ * } else {
+ *     printf("Failed to retrieve ring sizes for eth0.\n");
+ * }
+ */
+int get_nic_ring_size(const char *nic_name, size_t * rx_sz, size_t * tx_sz);
+
+/**
+ * @brief Sets the RX and TX ring buffer sizes for a specified NIC.
+ *
+ * This function uses an `ioctl` system call to set the receive (RX) and transmit (TX) 
+ * ring buffer sizes of a given network interface card (NIC). The sizes are set only 
+ * if they are greater than 0.
+ *
+ * @param[in] nic_name The name of the network interface card (e.g., "eth0").
+ * @param[in] rx_sz The desired RX ring buffer size. Set to 0 to leave it unchanged.
+ * @param[in] tx_sz The desired TX ring buffer size. Set to 0 to leave it unchanged.
+ *
+ * @return int Returns 0 on success, or -1 on failure.
+ *             - A failure can occur if the socket cannot be created, if the `ioctl` 
+ *               call fails, or if both `rx_sz` and `tx_sz` are 0.
+ *
+ * @note At least one of `rx_sz` or `tx_sz` must be greater than 0; otherwise, 
+ *       the function returns an error.
+ * @note Requires sufficient privileges (e.g., root) to modify NIC settings.
+ *
+ * @example
+ * // Set RX ring size to 1024 and TX ring size to 2048 for "eth0"
+ * if (set_nic_ring_size("eth0", 1024, 2048) == 0) {
+ *     printf("Successfully updated ring buffer sizes.\n");
+ * } else {
+ *     printf("Failed to update ring buffer sizes.\n");
+ * }
+ */
+int set_nic_ring_size(const char *nic_name, size_t rx_sz, size_t tx_sz);
+
+/**
+ * @brief Checks if a specified network interface is in promiscuous mode.
+ *
+ * This function determines whether the given network interface card (NIC) 
+ * is operating in promiscuous mode, where it can receive all packets on the 
+ * network regardless of the destination address.
+ *
+ * @param[in] nic_name The name of the network interface card (e.g., "eth0").
+ *
+ * @return int Returns:
+ *             - 1 if the NIC is in promiscuous mode.
+ *             - 0 if the NIC is not in promiscuous mode.
+ *             - -1 if an error occurs (e.g., socket creation or ioctl failure).
+ *
+ * @note Requires sufficient privileges (e.g., root) to query NIC flags.
+ *
+ * @example
+ * // Check if "eth0" is in promiscuous mode
+ * int result = is_promiscuous_mode("eth0");
+ * if (result == 1) {
+ *     printf("eth0 is in promiscuous mode.\n");
+ * } else if (result == 0) {
+ *     printf("eth0 is not in promiscuous mode.\n");
+ * } else {
+ *     printf("Failed to check promiscuous mode for eth0.\n");
+ * }
+ */
+int is_promiscuous_mode(const char *nic_name);
+
+/**
+ * @brief Enables promiscuous mode for a specified network interface.
+ *
+ * This function sets the network interface card (NIC) into promiscuous mode,
+ * allowing it to receive all packets on the network, regardless of their destination.
+ *
+ * @param[in] nic_name The name of the network interface card (e.g., "eth0").
+ *
+ * @return int Returns:
+ *             - 0 on success, indicating that promiscuous mode was enabled.
+ *             - -1 on failure, with an error message logged.
+ *
+ * @note This function requires sufficient privileges (e.g., root) to modify
+ *       the NIC's configuration.
+ *
+ * @example
+ * // Enable promiscuous mode for "eth0"
+ * if (set_promiscuous_mode("eth0") == 0) {
+ *     printf("Promiscuous mode enabled for eth0.\n");
+ * } else {
+ *     printf("Failed to enable promiscuous mode for eth0.\n");
+ * }
+ */
+int set_promiscuous_mode(const char *nic_name);
+
 #endif /* DF_COMMON_H */

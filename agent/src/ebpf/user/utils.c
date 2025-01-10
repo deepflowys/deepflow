@@ -38,7 +38,9 @@
 #include <sys/time.h>
 #include <string.h>
 #include <inttypes.h>
-#include <sys/utsname.h>
+#include <net/if.h>
+#include <linux/sockios.h>
+#include <sys/ioctl.h>
 #include <pthread.h>
 #include "config.h"
 #include "types.h"
@@ -604,13 +606,14 @@ int fetch_kernel_version(int *major, int *minor, int *rev, int *num)
 	int match_num = 0;
 	*num = 0;
 	// e.g.: 3.10.0-940.el7.centos.x86_64, 4.19.17-1.el7.x86_64
-	match_num = sscanf(sys_info.release, "%u.%u.%u-%u", major, minor, rev, num);
+	match_num =
+	    sscanf(sys_info.release, "%u.%u.%u-%u", major, minor, rev, num);
 	if (match_num == 4 || match_num == 3) {
 		return ETR_OK;
 	} else {
 		has_error = true;
 	}
-		
+
 	// Get the real version of Debian
 	// #1 SMP Debian 4.19.289-2 (2023-08-08)
 	// e.g.:
@@ -916,7 +919,7 @@ bool check_netns_enabled(void)
 
 	return true;
 }
-	
+
 // Function to retrieve the host PID from the first line of /proc/pid/sched
 // The expected format is "java (1234, #threads: 12)"
 // where 1234 is the host PID (before Linux 4.1)
@@ -1623,9 +1626,9 @@ u32 djb2_32bit(const char *str)
 	u32 hash = 5381;
 	int c;
 	while ((c = *str++)) {
-		hash = ((hash << 5) + hash) + c; // hash * 33 + c
+		hash = ((hash << 5) + hash) + c;	// hash * 33 + c
 	}
-	return hash; // 32-bit output
+	return hash;		// 32-bit output
 }
 
 #if !defined(AARCH64_MUSL) && !defined(JAVA_AGENT_ATTACH_TOOL)
@@ -1659,3 +1662,277 @@ int create_work_thread(const char *name, pthread_t * t, void *fn, void *arg)
 	return ETR_OK;
 }
 #endif /* !defined(AARCH64_MUSL) && !defined(JAVA_AGENT_ATTACH_TOOL) */
+
+char *trim(char *str)
+{
+	char *end;
+	while (isspace((unsigned char)*str))
+		str++;
+	if (*str == 0)
+		return str;
+	end = str + strlen(str) - 1;
+	while (end > str && isspace((unsigned char)*end))
+		end--;
+	*(end + 1) = '\0';
+
+	return str;
+}
+
+// Function to retrieve PCI device address and driver by NIC name
+int retrieve_pci_info_by_nic(const char *nic_name, char *pci_device_address,
+			     char *driver, int *numa_node)
+{
+	FILE *fp;
+	char path[MAX_PATH_LENGTH];
+	char line[MAX_PATH_LENGTH];	// Buffer for reading each line in the uevent file
+
+	// Construct the path to the uevent file for the specified network interface
+	snprintf(path, sizeof(path), "/sys/class/net/%s/device/uevent",
+		 nic_name);
+
+	// Open the uevent file to read the device information
+	fp = fopen(path, "r");
+	if (!fp) {
+		// Log an error message if the uevent file cannot be opened
+		ebpf_warning("Failed to open uevent file for %s: %s (%d)\n",
+			     nic_name, strerror(errno), errno);
+		return -1;
+	}
+	// Initialize the output variables to ensure they are empty in case no match is found
+	pci_device_address[0] = '\0';
+	driver[0] = '\0';
+
+	// Read each line of the uevent file
+	while (fgets(line, sizeof(line), fp)) {
+		// Check for PCI_SLOT_NAME and extract the PCI address
+		if (strstr(line, "PCI_SLOT_NAME") != NULL) {
+			sscanf(line, "PCI_SLOT_NAME=%s", pci_device_address);
+		}
+		// Check for DRIVER and extract the driver name
+		if (strstr(line, "DRIVER") != NULL) {
+			sscanf(line, "DRIVER=%s", driver);
+		}
+		// If both the PCI address and driver are found, no need to continue reading
+		if (pci_device_address[0] != '\0' && driver[0] != '\0') {
+			break;
+		}
+	}
+
+	// Close the file after reading the information
+	fclose(fp);
+
+	// Now, attempt to get the NUMA node from the PCI device
+	snprintf(path, sizeof(path), "/sys/bus/pci/devices/%s/numa_node",
+		 pci_device_address);
+	fp = fopen(path, "r");
+	if (fp) {
+		// Read the NUMA node information from the file
+		if (fscanf(fp, "%d", numa_node) != 1) {
+			// If unable to read NUMA node, set to -1
+			*numa_node = -1;
+		}
+		fclose(fp);
+	} else {
+		// If the file doesn't exist or cannot be opened, set NUMA node to -1
+		*numa_node = -1;
+	}
+
+	return 0;
+}
+
+// Function to get the number of RX and TX channels for a given NIC
+int get_nic_channels(const char *nic_name, int *rx_channels, int *tx_channels)
+{
+	char queue_path[MAX_PATH_LENGTH];
+	struct dirent *entry;
+	DIR *dir;
+
+	*rx_channels = *tx_channels = 0;
+	// Construct the path to the queues directory of the NIC
+	snprintf(queue_path, sizeof(queue_path), "/sys/class/net/%s/queues",
+		 nic_name);
+	dir = opendir(queue_path);
+	if (!dir) {
+		ebpf_warning("Failed to open directory: %s\n", queue_path);
+		return -1;
+	}
+	// Traverse the directory to count RX and TX channels
+	while ((entry = readdir(dir)) != NULL) {
+		if (strncmp(entry->d_name, "rx-", 3) == 0) {
+			(*rx_channels)++;
+		} else if (strncmp(entry->d_name, "tx-", 3) == 0) {
+			(*tx_channels)++;
+		}
+	}
+	closedir(dir);
+
+	return 0;
+}
+
+// Function to get RX/TX ring size
+int get_nic_ring_size(const char *nic_name, size_t * rx_sz, size_t * tx_sz)
+{
+	int sockfd;
+	struct ifreq ifr;
+	struct ethtool_ringparam ering;
+
+	// Initialize resultsdd
+	*rx_sz = *tx_sz = -1;
+
+	// Open a socket for ioctl
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ebpf_warning("Socket creation failed, with %s(%d)\n",
+			     strerror(errno), errno);
+		return -1;
+	}
+	// Prepare the ethtool request
+	memset(&ifr, 0, sizeof(ifr));
+	memset(&ering, 0, sizeof(ering));
+	strncpy(ifr.ifr_name, nic_name, IFNAMSIZ - 1);
+
+	ering.cmd = ETHTOOL_GRINGPARAM;
+	ifr.ifr_data = (caddr_t) & ering;
+
+	// Send the ioctl to get ring parameters
+	if (ioctl(sockfd, SIOCETHTOOL, &ifr) == -1) {
+		ebpf_warning("ioctl failed, with %s(%d)\n", strerror(errno),
+			     errno);
+		close(sockfd);
+		return -1;
+	}
+	// Extract RX/TX ring sizes
+	*rx_sz = ering.rx_pending;
+	*tx_sz = ering.tx_pending;
+
+	close(sockfd);
+	return 0;
+}
+
+int set_nic_ring_size(const char *nic_name, size_t rx_sz, size_t tx_sz)
+{
+	int sockfd;
+	struct ifreq ifr;
+	struct ethtool_ringparam ering;
+
+	// Open a socket for ioctl
+	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		ebpf_warning("Socket creation failed, with %s(%d)\n",
+			     strerror(errno), errno);
+		return -1;
+	}
+	// Prepare the ethtool request to get maximum ring sizes
+	memset(&ifr, 0, sizeof(ifr));
+	memset(&ering, 0, sizeof(ering));
+	strncpy(ifr.ifr_name, nic_name, IFNAMSIZ - 1);
+
+	ering.cmd = ETHTOOL_GRINGPARAM;	// Command to get ring parameters
+	ifr.ifr_data = (caddr_t) & ering;
+
+	// Get the maximum ring sizes using ioctl
+	if (ioctl(sockfd, SIOCETHTOOL, &ifr) == -1) {
+		ebpf_warning("Failed to get ring parameters, with %s(%d)\n",
+			     strerror(errno), errno);
+		close(sockfd);
+		return -1;
+	}
+	// Log the maximum ring sizes
+	ebpf_info("Max RX ring size: %u, Max TX ring size: %u\n",
+		  ering.rx_max_pending, ering.tx_max_pending);
+
+	// Set RX/TX sizes to maximum if they are 0
+	if (rx_sz == 0) {
+		rx_sz = ering.rx_max_pending;
+	}
+	if (tx_sz == 0) {
+		tx_sz = ering.tx_max_pending;
+	}
+	// Prepare the ethtool request to set ring sizes
+	ering.cmd = ETHTOOL_SRINGPARAM;	// Command to set ring parameters
+	ering.rx_pending = rx_sz;
+	ering.tx_pending = tx_sz;
+
+	// Set the ring sizes using ioctl
+	if (ioctl(sockfd, SIOCETHTOOL, &ifr) == -1) {
+		ebpf_warning("Failed to set ring parameters, with %s(%d)\n",
+			     strerror(errno), errno);
+		close(sockfd);
+		return -1;
+	}
+	// Log success
+	ebpf_info
+	    ("Successfully set RX ring size to %zu and TX ring size to %zu for NIC %s.\n",
+	     rx_sz, tx_sz, nic_name);
+
+	close(sockfd);
+	return 0;
+}
+
+int is_promiscuous_mode(const char *nic_name)
+{
+	int sock;
+	struct ifreq ifr;
+
+	// Create a socket
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		ebpf_warning("Failed to create socket, with %s(%d)\n",
+			     strerror(errno), errno);
+		return -1;
+	}
+	// Initialize the ifreq structure
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, nic_name, IFNAMSIZ - 1);
+
+	// Get interface flags
+	if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
+		ebpf_warning("Failed to get interface flags, with %s(%d)\n",
+			     strerror(errno), errno);
+		close(sock);
+		return -1;
+	}
+	// Check if IFF_PROMISC is set
+	int is_promiscuous = (ifr.ifr_flags & IFF_PROMISC) ? 1 : 0;
+
+	close(sock);
+	return is_promiscuous;
+}
+
+int set_promiscuous_mode(const char *nic_name)
+{
+	int sock;
+	struct ifreq ifr;
+
+	// Create a socket
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		ebpf_warning("Failed to create socket, with %s(%d)\n",
+			     strerror(errno), errno);
+		return -1;
+	}
+	// Initialize the ifreq structure
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, nic_name, IFNAMSIZ - 1);
+
+	// Get the current interface flags
+	if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
+		ebpf_warning("Failed to get interface flags, with %s(%d)\n",
+			     strerror(errno), errno);
+		close(sock);
+		return -1;
+	}
+	// Enable promiscuous mode by setting the IFF_PROMISC flag
+	ifr.ifr_flags |= IFF_PROMISC;
+
+	// Set the updated interface flags
+	if (ioctl(sock, SIOCSIFFLAGS, &ifr) < 0) {
+		ebpf_warning("Failed to set interface flags, with %s(%d)\n",
+			     strerror(errno), errno);
+		close(sock);
+		return -1;
+	}
+
+	close(sock);
+	return 0;
+}
