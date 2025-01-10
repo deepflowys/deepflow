@@ -1,5 +1,5 @@
 # Value , DisplayName                        , Description
-0       , Unknown                            ,
+0       , Others                             ,
 1       , Normal                             ,
 5       , Force Report                       ,
 13      , Est. - Client Port Reuse           ,
