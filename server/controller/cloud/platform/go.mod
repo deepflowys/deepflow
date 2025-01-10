@@ -1,3 +1,3 @@
 module github.com/deepflowio/deepflow/server/controller/cloud/platform
 
-go 1.18
+go 1.23
