@@ -1832,9 +1832,15 @@ static __inline void process_syscall_data_vecs(struct pt_regs *ctx, __u64 id,
  * BPF syscall probe/tracepoint/kfunc function entry-points
  ***********************************************************/
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KPROG(ksys_write) (struct pt_regs* ctx) {
+	int fd = (int)PT_REGS_PARM1(ctx);
+	char *buf = (char *)PT_REGS_PARM2(ctx);
+#else
 TP_SYSCALL_PROG(enter_write) (struct syscall_comm_enter_ctx * ctx) {
 	int fd = (int)ctx->fd;
 	char *buf = (char *)ctx->buf;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 // ssize_t ksys_write(unsigned int fd, const char __user *buf, size_t count)
 KFUNC_PROG(ksys_write, unsigned int fd, const char __user * buf, size_t count)
@@ -1857,9 +1863,14 @@ KFUNC_PROG(ksys_write, unsigned int fd, const char __user * buf, size_t count)
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(ksys_write) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_write/format
 TP_SYSCALL_PROG(exit_write) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 KRETFUNC_PROG(ksys_write, unsigned int fd, const char __user * buf,
 	      size_t count, ssize_t ret)
@@ -1881,10 +1892,17 @@ KRETFUNC_PROG(ksys_write, unsigned int fd, const char __user * buf,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+// ssize_t read(int fd, void *buf, size_t count);
+KPROG(ksys_read) (struct pt_regs* ctx) {
+	int fd = (unsigned int)PT_REGS_PARM1(ctx);
+	char *buf = (char *)PT_REGS_PARM2(ctx);
+#else
 // ssize_t read(int fd, void *buf, size_t count);
 TP_SYSCALL_PROG(enter_read) (struct syscall_comm_enter_ctx * ctx) {
 	int fd = (int)ctx->fd;
 	char *buf = (char *)ctx->buf;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 // ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 KFUNC_PROG(ksys_read, unsigned int fd, const char __user * buf, size_t count)
@@ -1908,9 +1926,14 @@ KFUNC_PROG(ksys_read, unsigned int fd, const char __user * buf, size_t count)
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(ksys_read) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_read/format
 TP_SYSCALL_PROG(exit_read) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 // ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
 KRETFUNC_PROG(ksys_read, unsigned int fd, const char __user * buf, size_t count,
@@ -1955,9 +1978,17 @@ KRETFUNC_PROG(ksys_read, unsigned int fd, const char __user * buf, size_t count,
  * types of system calls, we need to save this information beforehand.
  */
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+// ssize_t sendto(int sockfd, const void *buf, size_t len, int flags,
+//		const struct sockaddr *dest_addr, socklen_t addrlen);
+KPROG(__sys_sendto) (struct pt_regs* ctx) {
+	int sockfd = (int)PT_REGS_PARM1(ctx);
+	char *buf = (char *)PT_REGS_PARM2(ctx);
+#else
 TP_SYSCALL_PROG(enter_sendto) (struct syscall_comm_enter_ctx * ctx) {
 	int sockfd = (int)ctx->fd;
 	char *buf = (char *)ctx->buf;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 //int __sys_sendto(int fd, void __user *buff, size_t len, unsigned int flags,
 //                 struct sockaddr __user *addr,  int addr_len)
@@ -2015,9 +2046,14 @@ KFUNC_PROG(__sys_sendto, int fd, void __user * buff, size_t len,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_sendto) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_sendto/format
 TP_SYSCALL_PROG(exit_sendto) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 KRETFUNC_PROG(__sys_sendto, int fd, void __user * buff, size_t len,
 	      unsigned int flags, struct sockaddr __user * u_addr, int addr_len,
@@ -2039,6 +2075,18 @@ KRETFUNC_PROG(__sys_sendto, int fd, void __user * buff, size_t len,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+// ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+//		  struct sockaddr *src_addr, socklen_t *addrlen);
+KPROG(__sys_recvfrom) (struct pt_regs* ctx) {
+	int sockfd = (int)PT_REGS_PARM1(ctx);
+	char *buf = (char *)PT_REGS_PARM2(ctx);
+	int flags = (int)PT_REGS_PARM4(ctx);
+	// If flags contains MSG_PEEK, it is returned directly.
+	// ref : https://linux.die.net/man/2/recvfrom
+	if (flags & MSG_PEEK)
+		return 0;
+#else
 // ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
 //                struct sockaddr *src_addr, socklen_t *addrlen);
 TP_SYSCALL_PROG(enter_recvfrom) (struct syscall_comm_enter_ctx * ctx) {
@@ -2048,6 +2096,7 @@ TP_SYSCALL_PROG(enter_recvfrom) (struct syscall_comm_enter_ctx * ctx) {
 		return 0;
 	int sockfd = (int)ctx->fd;
 	char *buf = (char *)ctx->buf;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 //int __sys_recvfrom(int fd, void __user *ubuf, size_t size, unsigned int flags,
 //                   struct sockaddr __user *addr, int __user *addr_len)
@@ -2078,9 +2127,15 @@ KFUNC_PROG(__sys_recvfrom, int fd, void __user * ubuf, size_t size,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+// /sys/kernel/debug/tracing/events/syscalls/sys_exit_recvfrom/format
+KRETPROG(__sys_recvfrom) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_recvfrom/format
 TP_SYSCALL_PROG(exit_recvfrom) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 KRETFUNC_PROG(__sys_recvfrom, int fd, void __user * ubuf, size_t size,
 	      unsigned int flags, struct sockaddr __user * addr,
@@ -2142,9 +2197,14 @@ KFUNC_PROG(__sys_sendmsg, int fd, struct user_msghdr __user * msg,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_sendmsg) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_sendmsg/format
 TP_SYSCALL_PROG(exit_sendmsg) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /*NO_FTRACE_SYSCALL*/
 #else
 KRETFUNC_PROG(__sys_sendmsg, int sockfd, const struct msghdr * msg, int flags,
 	      bool forbid_cmsg_compat, long ret)
@@ -2206,9 +2266,14 @@ KFUNC_PROG(__sys_sendmmsg, int fd, struct mmsghdr __user * mmsg,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_sendmmsg)(struct pt_regs* ctx) {
+	int num_msgs = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_sendmmsg/format
 TP_SYSCALL_PROG(exit_sendmmsg) (struct syscall_comm_exit_ctx * ctx) {
 	int num_msgs = ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 KRETFUNC_PROG(__sys_sendmmsg, int fd, struct mmsghdr __user * mmsg,
 	      unsigned int vlen, unsigned int flags, bool forbid_cmsg_compat,
@@ -2276,9 +2341,14 @@ KFUNC_PROG(__sys_recvmsg, int fd, struct user_msghdr __user * msg,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_recvmsg) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_recvmsg/format
 TP_SYSCALL_PROG(exit_recvmsg) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 KRETFUNC_PROG(__sys_recvmsg, int fd, struct user_msghdr __user * msg,
 	      unsigned int flags, bool forbid_cmsg_compat, long ret)
@@ -2357,9 +2427,14 @@ KFUNC_PROG(__sys_recvmmsg, int fd, struct mmsghdr __user * mmsg,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_recvmmsg) (struct pt_regs* ctx) {
+	int num_msgs = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_recvmmsg/format
 TP_SYSCALL_PROG(exit_recvmmsg) (struct syscall_comm_exit_ctx * ctx) {
 	int num_msgs = ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 KRETFUNC_PROG(__sys_recvmmsg, int fd, struct mmsghdr __user * mmsg,
 	      unsigned int vlen, unsigned int flags,
@@ -2421,9 +2496,14 @@ KFUNC_PROG(do_writev, unsigned long fd, const struct iovec __user * vec,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(do_writev) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_writev/format
 TP_SYSCALL_PROG(exit_writev) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 KRETFUNC_PROG(do_writev, unsigned long fd, const struct iovec __user * vec,
 	      unsigned long vlen, rwf_t flags, ssize_t ret)
@@ -2481,9 +2561,14 @@ KFUNC_PROG(do_readv, unsigned long fd, const struct iovec __user * vec,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(do_readv) (struct pt_regs* ctx) {
+	ssize_t bytes_count = PT_REGS_RC(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_readv/format
 TP_SYSCALL_PROG(exit_readv) (struct syscall_comm_exit_ctx * ctx) {
 	ssize_t bytes_count = ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 KRETFUNC_PROG(do_readv, unsigned long fd, const struct iovec __user * vec,
 	      unsigned long vlen, rwf_t flags, ssize_t ret)
@@ -2557,9 +2642,14 @@ static __inline void __push_close_event(__u64 pid_tgid, __u64 uid, __u64 seq,
 }
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KPROG(__close_fd) (struct pt_regs* ctx) {
+	int fd = (int)PT_REGS_PARM2(ctx);
+#else
 // /sys/kernel/debug/tracing/events/syscalls/sys_enter_close/format
 TP_SYSCALL_PROG(enter_close) (struct syscall_comm_enter_ctx * ctx) {
 	int fd = ctx->fd;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 #if defined(__x86_64__)
 //asmlinkage long __x64_sys_close(const struct pt_regs *regs) {
@@ -2605,8 +2695,13 @@ KFUNC_PROG(__arm64_sys_close, const struct pt_regs *regs)
 //int __sys_socket(int family, int type, int protocol)
 // /sys/kernel/debug/tracing/events/syscalls/sys_exit_socket/format
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_socket) (struct pt_regs* ctx) {
+	__u64 fd = (__u64)PT_REGS_RC(ctx);
+#else
 TP_SYSCALL_PROG(exit_socket) (struct syscall_comm_exit_ctx * ctx) {
 	__u64 fd = (__u64) ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 KRETFUNC_PROG(__sys_socket, int family, int type, int protocol, int ret)
 {
@@ -2655,8 +2750,13 @@ KRETFUNC_PROG(__sys_socket, int family, int type, int protocol, int ret)
  * `kfunc` type should directly use `__sys_accept4()`.
  */
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KRETPROG(__sys_accept4) (struct pt_regs* ctx) {
+	int sockfd = PT_REGS_RC(ctx);
+#else
 TP_SYSCALL_PROG(exit_accept) (struct syscall_comm_exit_ctx * ctx) {
 	int sockfd = ctx->ret;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 //int __sys_accept4(int fd, struct sockaddr __user *upeer_sockaddr,
 //                  int __user *upeer_addrlen, int flags)
@@ -2673,7 +2773,7 @@ KRETFUNC_PROG(__sys_accept4, int fd, struct sockaddr __user * upeer_sockaddr,
 	return 0;
 }
 
-#ifndef LINUX_VER_KFUNC
+#if !defined(LINUX_VER_KFUNC) && !defined(NO_FTRACE_SYSCALL)
 TP_SYSCALL_PROG(exit_accept4) (struct syscall_comm_exit_ctx * ctx) {
 	int sockfd = ctx->ret;
 	__u64 pid_tgid = bpf_get_current_pid_tgid();
@@ -2686,8 +2786,13 @@ TP_SYSCALL_PROG(exit_accept4) (struct syscall_comm_exit_ctx * ctx) {
 #endif
 
 #ifndef LINUX_VER_KFUNC
+#ifdef NO_FTRACE_SYSCALL
+KPROG(__sys_connect) (struct pt_regs* ctx) {
+	int sockfd = (int)PT_REGS_PARM1(ctx);
+#else
 TP_SYSCALL_PROG(enter_connect) (struct syscall_comm_enter_ctx * ctx) {
 	int sockfd = ctx->fd;
+#endif /* NO_FTRACE_SYSCALL */
 #else
 // int __sys_connect(int fd, struct sockaddr __user *uservaddr, int addrlen)
 KFUNC_PROG(__sys_connect, int fd, struct sockaddr __user * uservaddr,
@@ -3394,7 +3499,11 @@ static __inline int push_socket_data(struct syscall_comm_enter_ctx *ctx)
 // /sys/kernel/debug/tracing/events/syscalls/sys_enter_getppid
 // Here, the tracepoint is used to periodically send the data residing in the cache but not
 // yet transmitted to the user-level receiving program for processing.
+#ifdef NO_FTRACE_SYSCALL
+KPROG(sys_getppid) (struct pt_regs* ctx) {
+#else
 TP_SYSCALL_PROG(enter_getppid) (struct syscall_comm_enter_ctx * ctx) {
+#endif /* NO_FTRACE_SYSCALL */
 	// Only pre-specified Pid is allowed to trigger.
 	if (!check_pid_validity())
 		return 0;
