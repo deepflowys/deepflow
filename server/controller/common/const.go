@@ -302,6 +302,7 @@ const (
 	SUGON             = 29
 	VOLCENGINE        = 30
 	H3C               = 31
+	FUSIONCOMPUTE     = 32
 
 	OPENSTACK_EN         = "openstack"
 	VSPHERE_EN           = "vsphere"
@@ -333,6 +334,7 @@ const (
 	SUGON_EN             = "sugon"
 	VOLCENGINE_EN        = "volcengine"
 	H3C_EN               = "h3c"
+	FUSIONCOMPUTE_EN     = "fusioncompute"
 
 	TENCENT_CH          = "腾讯云"
 	ALIYUN_CH           = "阿里云"
@@ -347,13 +349,14 @@ const (
 	VOLCENGINE_CH       = "火山云"
 	H3C_CH              = "华三云"
 
-	OPENSTACK_CH   = "OpenStack"
-	VSPHERE_CH     = "vSphere"
-	NSP_CH         = "NSP"
-	AWS_CH         = "AWS"
-	ZSTACK_CH      = "ZStack"
-	KUBERNETES_CH  = "Kubernetes"
-	CLOUD_TOWER_CH = "CloudTower"
+	OPENSTACK_CH     = "OpenStack"
+	VSPHERE_CH       = "vSphere"
+	NSP_CH           = "NSP"
+	AWS_CH           = "AWS"
+	ZSTACK_CH        = "ZStack"
+	KUBERNETES_CH    = "Kubernetes"
+	CLOUD_TOWER_CH   = "CloudTower"
+	FUSIONCOMPUTE_CH = "FusionCompute"
 )
 
 var DomainTypeToIconID = map[int]int{
