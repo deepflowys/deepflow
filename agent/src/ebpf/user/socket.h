@@ -71,7 +71,7 @@ struct socket_bpf_data {
 	uint16_t l7_protocal_hint;	// 应用数据（cap_data）的协议类型，枚举如下：1 SOCK_DATA_HTTP1, 2 SOCK_DATA_DNS, 3 ...
 	// 存在一定误判性（例如标识为A协议但实际上是未知协议，或标识为多种协议），上层应用应继续深入判断
 	uint8_t msg_type;	// 信息类型，值为MSG_UNKNOWN(0), MSG_REQUEST(1), MSG_RESPONSE(2)
-	bool need_reconfirm;	// 是否需要上层再确认 
+	bool need_reconfirm;	// 是否需要上层再确认
 	bool is_tls;
 
 	/* trace info */
@@ -118,12 +118,12 @@ struct socket_bpf_data {
  * @tracer_state: 追踪器当前状态
  *
  * @boot_time_update_diff 这里用于记录相邻两次更新后，系统启动时间之间的差异（单位为纳秒）。
- * @probes_count How many probes now 
+ * @probes_count How many probes now
  * @data_limit_max Maximum data length limit
  *
  * @period_push_conflict_count When the periodic push event detects that the
  *    buffer is being modified by another eBPF program, a conflict will occur.
- *    This is used to record the number of conflicts. 
+ *    This is used to record the number of conflicts.
  * @period_push_max_delay The maximum latency time for periodic push events, in microseconds.
  * @period_push_avg_delay The average latency time for periodic push events, in microseconds.
  * @proc_exec_event_count The number of events for process execute.
@@ -213,7 +213,7 @@ struct bpf_socktrace_params {
 };
 
 /*
- * This structure is used for registration of additional events. 
+ * This structure is used for registration of additional events.
  */
 struct extra_event {
 	struct list_head list;
@@ -244,6 +244,8 @@ static inline char *get_proto_name(uint16_t proto_id)
 		return "OpenWire";
 	case PROTO_ZMTP:
 		return "ZMTP";
+	case PROTO_ROCKETMQ:
+		return "RocketMQ";
 	case PROTO_NATS:
 		return "NATS";
 	case PROTO_PULSAR:
@@ -355,7 +357,7 @@ prefetch_and_process_data(struct bpf_tracer *t, int nb_rx, void **datas_burst)
 			if (t->datadump)
 				t->datadump((void *)sd, boot_time);
 			/*
-			 * Modify socket data time to real time, 
+			 * Modify socket data time to real time,
 			 * time precision is in nanosecond.
 			 */
 			sd->timestamp = sd->timestamp + boot_time;

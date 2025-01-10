@@ -29,6 +29,7 @@ The following protocols are currently probed:
 - MONGO
 - ORACLE
 - FASTCGI
+- ROCKETMQ
 
 ## TLS/SSL Tracing
 
