@@ -39,8 +39,8 @@ use crate::flow_generator::protocol_logs::plugin::get_custom_log_parser;
 use crate::flow_generator::protocol_logs::sql::ObfuscateCache;
 use crate::flow_generator::protocol_logs::{
     AmqpLog, BrpcLog, DnsLog, DubboLog, HttpLog, KafkaLog, MemcachedLog, MongoDBLog, MqttLog,
-    MysqlLog, NatsLog, OpenWireLog, PostgresqlLog, PulsarLog, RedisLog, SofaRpcLog, TarsLog,
-    ZmtpLog,
+    MysqlLog, NatsLog, OpenWireLog, PostgresqlLog, PulsarLog, RedisLog, RocketmqLog, SofaRpcLog,
+    TarsLog, ZmtpLog,
 };
 
 use crate::flow_generator::{LogMessageType, Result};
@@ -183,6 +183,7 @@ cfg_if::cfg_if! {
                 NATS(NatsLog),
                 Pulsar(PulsarLog),
                 ZMTP(ZmtpLog),
+                RocketMQ(RocketmqLog),
                 OpenWire(OpenWireLog),
                 // add protocol below
             }
@@ -210,6 +211,7 @@ cfg_if::cfg_if! {
                 NATS(NatsLog),
                 Pulsar(PulsarLog),
                 ZMTP(ZmtpLog),
+                RocketMQ(RocketmqLog),
                 OpenWire(OpenWireLog),
                 TLS(crate::flow_generator::protocol_logs::tls::TlsLog),
                 SomeIp(crate::flow_generator::protocol_logs::rpc::SomeIpLog),

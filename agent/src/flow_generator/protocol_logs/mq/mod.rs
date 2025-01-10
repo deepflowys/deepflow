@@ -20,6 +20,7 @@ pub mod mqtt;
 mod nats;
 mod openwire;
 mod pulsar;
+mod rocketmq;
 mod zmtp;
 
 pub use amqp::{AmqpInfo, AmqpLog};
@@ -28,4 +29,5 @@ pub use mqtt::{MqttInfo, MqttLog};
 pub use nats::{NatsInfo, NatsLog};
 pub use openwire::{OpenWireInfo, OpenWireLog};
 pub use pulsar::{PulsarInfo, PulsarLog};
+pub use rocketmq::{RocketmqInfo, RocketmqLog};
 pub use zmtp::{ZmtpInfo, ZmtpLog};

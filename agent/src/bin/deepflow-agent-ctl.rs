@@ -175,7 +175,7 @@ struct EbpfArgs {
     ///   HTTP1(20), HTTP2(21), Dubbo(40), SofaRPC(43),
     ///   MySQL(60), PostGreSQL(61), Oracle(62),
     ///   Redis(80), MongoDB(81), Memcached(82),
-    ///   Kafka(100), MQTT(101), DNS(120), TLS(121),
+    ///   Kafka(100), MQTT(101), RocketMQ(107), DNS(120), TLS(121),
     ///
     /// eg: deepflow-agent-ctl ebpf datadump --proto 20
     #[clap(long, parse(try_from_str), default_value_t = 0)]

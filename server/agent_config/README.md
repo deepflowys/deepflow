@@ -6209,6 +6209,7 @@ processors:
         TLS: 443,6443
         Tars: 1-65535
         ZMTP: 1-65535
+        RocketMQ: 1-65535
         bRPC: 1-65535
 ```
 
@@ -6280,6 +6281,7 @@ processors:
         TLS: []
         Tars: []
         ZMTP: []
+        RocketMQ: []
         bRPC: []
         gRPC: []
 ```

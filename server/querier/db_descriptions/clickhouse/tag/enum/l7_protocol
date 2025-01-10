@@ -22,6 +22,7 @@
 104     , NATS            ,
 105     , Pulsar          ,
 106     , ZMTP            , ZeroMQ
+107     , RocketMQ        ,
 120     , DNS             ,
 121     , TLS             ,
 127     , Custom          ,

@@ -171,6 +171,7 @@ const (
 	L7_PROTOCOL_NATS      L7Protocol = 104
 	L7_PROTOCOL_PULSAR    L7Protocol = 105
 	L7_PROTOCOL_ZMTP      L7Protocol = 106
+	L7_PROTOCOL_ROCKETMQ  L7Protocol = 107
 	L7_PROTOCOL_DNS       L7Protocol = 120
 	L7_PROTOCOL_TLS       L7Protocol = 121
 	L7_PROTOCOL_CUSTOM    L7Protocol = 127
@@ -748,6 +749,12 @@ func (p L7Protocol) String(isTLS bool) string {
 		} else {
 			return "ZMTP"
 		}
+	case L7_PROTOCOL_ROCKETMQ:
+		if isTLS {
+			return "RocketMQ_TLS"
+		} else {
+			return "RocketMQ"
+		}
 	case L7_PROTOCOL_DNS:
 		if isTLS {
 			return "DNS_TLS"
@@ -789,6 +796,7 @@ var L7ProtocolStringMap = map[string]L7Protocol{
 	strings.ToLower(L7_PROTOCOL_NATS.String(false)):     L7_PROTOCOL_NATS,
 	strings.ToLower(L7_PROTOCOL_PULSAR.String(false)):   L7_PROTOCOL_PULSAR,
 	strings.ToLower(L7_PROTOCOL_ZMTP.String(false)):     L7_PROTOCOL_ZMTP,
+	strings.ToLower(L7_PROTOCOL_ROCKETMQ.String(false)): L7_PROTOCOL_ROCKETMQ,
 	strings.ToLower(L7_PROTOCOL_DNS.String(false)):      L7_PROTOCOL_DNS,
 	strings.ToLower(L7_PROTOCOL_TLS.String(false)):      L7_PROTOCOL_TLS,
 	strings.ToLower(L7_PROTOCOL_CUSTOM.String(false)):   L7_PROTOCOL_CUSTOM,

@@ -1109,6 +1109,7 @@ static_config:
   #- NATS
   #- Pulsar
   #- ZMTP
+  #- RocketMQ
   - DNS
   - TLS
   #- Custom ## custom protocol from plugin
@@ -1141,6 +1142,7 @@ static_config:
     "NATS": "1-65535"
     "Pulsar": "1-65535"
     "ZMTP": "1-65535"
+    "RocketMQ": "1-65535"
     "DNS": "53,5353"
     "TLS": "443,6443"
     "Custom": "1-65535" # plugins
@@ -1178,6 +1180,7 @@ static_config:
     NATS: []
     Pulsar: []
     ZMTP: []
+    RocketMQ: []
     DNS: []
     TLS: []
 
@@ -1623,6 +1626,7 @@ static_config:
     #   - AMQP
     #   - OpenWire
     #   - NATS
+    #   - RocketMQ
     #   - DNS
     #   - TLS
     #   - Custom ## custom protocol from plugin
@@ -1653,6 +1657,7 @@ static_config:
     #   - AMQP
     #   - OpenWire
     #   - NATS
+    #   - RocketMQ
     #   - DNS
     #   - TLS
     #   - Custom ## custom protocol from plugin

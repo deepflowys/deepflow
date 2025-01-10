@@ -30,7 +30,7 @@ use self::pb_adapter::L7ProtocolSendLog;
 pub use dns::{DnsInfo, DnsLog};
 pub use mq::{
     AmqpInfo, AmqpLog, KafkaInfo, KafkaLog, MqttInfo, MqttLog, NatsInfo, NatsLog, OpenWireInfo,
-    OpenWireLog, PulsarInfo, PulsarLog, ZmtpInfo, ZmtpLog,
+    OpenWireLog, PulsarInfo, PulsarLog, RocketmqInfo, RocketmqLog, ZmtpInfo, ZmtpLog,
 };
 use num_enum::TryFromPrimitive;
 pub use parser::{AppProto, MetaAppProto, PseudoAppProto, SessionAggregator};
