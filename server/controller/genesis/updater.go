@@ -451,7 +451,13 @@ func (v *GenesisSyncRpcUpdater) ParseHostAsVmPlatformInfo(info VIFRPCMessage, pe
 				break
 			}
 		}
-		networkName := fmt.Sprintf("Network-%s/%v", firstIP.Address, firstIP.MaskLen)
+		networkIP, err := netaddr.ParseIP(firstIP.Address)
+		if err != nil {
+			log.Errorf("parse first ip (%s) err: (%s)", firstIP.Address, err.Error())
+			continue
+		}
+		networkPrefix := netaddr.IPPrefixFrom(networkIP, uint8(firstIP.MaskLen))
+		networkName := fmt.Sprintf("Network-%s", networkPrefix.Masked().String())
 		network, ok := nameToNetwork[networkName]
 		vType := common.VIF_TYPE_LAN
 		netType := common.NETWORK_TYPE_LAN
