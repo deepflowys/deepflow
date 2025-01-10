@@ -192,20 +192,14 @@ func (g *GenesisKubernetes) Start() {
 			var version uint64
 			var clusterID, errMsg string
 			var entries []*mcommon.KubernetesAPIInfo
-			if info.Message != nil {
-				clusterID = info.Message.GetClusterId()
-				version = info.Message.GetVersion()
-				errMsg = info.Message.GetErrorMsg()
-				entries = info.Message.GetEntries()
-			} else if info.AgentMessage != nil {
-				clusterID = info.AgentMessage.GetClusterId()
-				version = info.AgentMessage.GetVersion()
-				errMsg = info.AgentMessage.GetErrorMsg()
-				entries = info.AgentMessage.GetEntries()
-			} else {
+			if info.Message == nil {
 				log.Errorf("k8s message is nil, vtap_id (%d)", info.VtapID, logger.NewORGPrefix(info.ORGID))
 				continue
 			}
+			clusterID = info.Message.GetClusterId()
+			version = info.Message.GetVersion()
+			errMsg = info.Message.GetErrorMsg()
+			entries = info.Message.GetEntries()
 
 			log.Debugf("k8s from %s vtap_id %v received cluster_id %s version %d", info.Peer, info.VtapID, clusterID, version, logger.NewORGPrefix(info.ORGID))
 			// 更新和保存内存数据

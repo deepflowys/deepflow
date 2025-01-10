@@ -27,7 +27,7 @@ import (
 
 	"inet.af/netaddr"
 
-	"github.com/deepflowio/deepflow/message/trident"
+	"github.com/deepflowio/deepflow/message/agent"
 	ccommon "github.com/deepflowio/deepflow/server/controller/common"
 	"github.com/deepflowio/deepflow/server/controller/genesis/common"
 	"github.com/deepflowio/deepflow/server/controller/genesis/config"
@@ -137,7 +137,7 @@ func NewGenesisSyncRpcUpdater(cfg config.GenesisConfig) *GenesisSyncRpcUpdater {
 	}
 }
 
-func (v *GenesisSyncRpcUpdater) ParseVinterfaceInfo(orgID int, teamID, vtapID uint32, peer, deviceType string, message *trident.GenesisSyncRequest) []model.GenesisVinterface {
+func (v *GenesisSyncRpcUpdater) ParseVinterfaceInfo(orgID int, teamID, vtapID uint32, peer, deviceType string, message *agent.GenesisSyncRequest) []model.GenesisVinterface {
 	var isContainer bool
 	if deviceType == common.DEVICE_TYPE_DOCKER_HOST {
 		isContainer = true
@@ -316,7 +316,7 @@ func (v *GenesisSyncRpcUpdater) ParseVinterfaceInfo(orgID int, teamID, vtapID ui
 	return VIFs
 }
 
-func (v *GenesisSyncRpcUpdater) ParseVIP(orgID int, vtapID uint32, message *trident.GenesisSyncRequest) []model.GenesisVIP {
+func (v *GenesisSyncRpcUpdater) ParseVIP(orgID int, vtapID uint32, message *agent.GenesisSyncRequest) []model.GenesisVIP {
 	var vips []model.GenesisVIP
 
 	ipAddrs := message.GetPlatformData().GetRawIpAddrs()
@@ -356,7 +356,7 @@ func (v *GenesisSyncRpcUpdater) ParseVIP(orgID int, vtapID uint32, message *trid
 	return vips
 }
 
-func (v *GenesisSyncRpcUpdater) ParseHostAsVmPlatformInfo(orgID int, vtapID uint32, peer string, message *trident.GenesisSyncRequest) common.GenesisSyncDataResponse {
+func (v *GenesisSyncRpcUpdater) ParseHostAsVmPlatformInfo(orgID int, vtapID uint32, peer string, message *agent.GenesisSyncRequest) common.GenesisSyncDataResponse {
 	hostName := strings.Trim(message.GetPlatformData().GetRawHostname(), " \n")
 	if hostName == "" {
 		log.Error("get sync data (raw hostname) empty", logger.NewORGPrefix(orgID))
@@ -515,7 +515,7 @@ func (v *GenesisSyncRpcUpdater) ParseHostAsVmPlatformInfo(orgID int, vtapID uint
 	}
 }
 
-func (v *GenesisSyncRpcUpdater) ParseProcessInfo(orgID int, vtapID uint32, message *trident.GenesisSyncRequest) []model.GenesisProcess {
+func (v *GenesisSyncRpcUpdater) ParseProcessInfo(orgID int, vtapID uint32, message *agent.GenesisSyncRequest) []model.GenesisProcess {
 	processes := []model.GenesisProcess{}
 	if vtapID == 0 {
 		return processes
@@ -547,7 +547,7 @@ func (v *GenesisSyncRpcUpdater) ParseProcessInfo(orgID int, vtapID uint32, messa
 	return processes
 }
 
-func (v *GenesisSyncRpcUpdater) ParseKVMPlatformInfo(orgID int, vtapID uint32, peer string, message *trident.GenesisSyncRequest) common.GenesisSyncDataResponse {
+func (v *GenesisSyncRpcUpdater) ParseKVMPlatformInfo(orgID int, vtapID uint32, peer string, message *agent.GenesisSyncRequest) common.GenesisSyncDataResponse {
 	rawVM := strings.Trim(message.GetPlatformData().GetRawAllVmXml(), " ")
 	rawOVSInterface := strings.Trim(message.GetPlatformData().GetRawOvsInterfaces(), " ")
 	rawOVSPorts := strings.Trim(message.GetPlatformData().GetRawOvsPorts(), " ")
@@ -829,7 +829,7 @@ func (v *GenesisSyncRpcUpdater) ParseKVMPlatformInfo(orgID int, vtapID uint32, p
 	}
 }
 
-func (v *GenesisSyncRpcUpdater) UnmarshalProtobuf(orgID int, teamID, vtapID uint32, peer string, message *trident.GenesisSyncRequest) common.GenesisSyncDataResponse {
+func (v *GenesisSyncRpcUpdater) UnmarshalProtobuf(orgID int, teamID, vtapID uint32, peer string, message *agent.GenesisSyncRequest) common.GenesisSyncDataResponse {
 	genesisSyncData := common.GenesisSyncDataResponse{}
 	if common.IPInRanges(peer, v.hostIPsRanges...) && message.GetPlatformData().GetPlatformEnabled() {
 		genesisSyncData = v.ParseKVMPlatformInfo(orgID, vtapID, peer, message)
@@ -841,7 +841,7 @@ func (v *GenesisSyncRpcUpdater) UnmarshalProtobuf(orgID int, teamID, vtapID uint
 	return genesisSyncData
 }
 
-func (v *GenesisSyncRpcUpdater) UnmarshalKubernetesProtobuf(orgID int, teamID, vtapID uint32, peer string, message *trident.GenesisSyncRequest) common.GenesisSyncDataResponse {
+func (v *GenesisSyncRpcUpdater) UnmarshalKubernetesProtobuf(orgID int, teamID, vtapID uint32, peer string, message *agent.GenesisSyncRequest) common.GenesisSyncDataResponse {
 	genesisSyncData := common.GenesisSyncDataResponse{}
 	if message.GetPlatformData().GetPlatformEnabled() {
 		genesisSyncData = v.ParseHostAsVmPlatformInfo(orgID, vtapID, peer, message)
@@ -853,7 +853,7 @@ func (v *GenesisSyncRpcUpdater) UnmarshalKubernetesProtobuf(orgID int, teamID, v
 	return genesisSyncData
 }
 
-func (v *GenesisSyncRpcUpdater) UnmarshalWorkloadProtobuf(orgID int, teamID, vtapID uint32, peer, deviceType string, message *trident.GenesisSyncRequest) common.GenesisSyncDataResponse {
+func (v *GenesisSyncRpcUpdater) UnmarshalWorkloadProtobuf(orgID int, teamID, vtapID uint32, peer, deviceType string, message *agent.GenesisSyncRequest) common.GenesisSyncDataResponse {
 	genesisSyncData := common.GenesisSyncDataResponse{}
 	if message.GetPlatformData().GetPlatformEnabled() {
 		genesisSyncData = v.ParseHostAsVmPlatformInfo(orgID, vtapID, peer, message)

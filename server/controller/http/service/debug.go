@@ -159,7 +159,7 @@ func GetGenesisKubernetesData(g *genesis.Genesis, orgID int, clusterID string) (
 	return g.GetKubernetesResponse(orgID, clusterID)
 }
 
-func GetAgentStats(g *genesis.Genesis, orgID, vtapID string) (grpc.TridentStats, error) {
+func GetAgentStats(g *genesis.Genesis, orgID, vtapID string) (grpc.AgentStats, error) {
 	return genesis.GenesisService.Synchronizer.GetAgentStats(orgID, vtapID)
 }
 

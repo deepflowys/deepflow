@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/deepflowio/deepflow/message/agent"
-	tridentcommon "github.com/deepflowio/deepflow/message/common"
 	api "github.com/deepflowio/deepflow/message/controller"
 	ccommon "github.com/deepflowio/deepflow/server/controller/common"
 	"github.com/deepflowio/deepflow/server/controller/config"
@@ -427,33 +426,20 @@ func (g *GenesisSync) Start() {
 					}
 				}
 			} else if info.MessageType == common.TYPE_UPDATE {
-				if info.Message != nil {
-					tridentType := info.Message.GetTridentType()
-					switch tridentType {
-					case tridentcommon.TridentType_TT_PHYSICAL_MACHINE:
-						genesisSyncData = vUpdater.UnmarshalWorkloadProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, common.DEVICE_TYPE_PHYSICAL_MACHINE, info.Message)
-					case tridentcommon.TridentType_TT_PUBLIC_CLOUD:
-						genesisSyncData = vUpdater.UnmarshalWorkloadProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, common.DEVICE_TYPE_PUBLIC_CLOUD, info.Message)
-					case tridentcommon.TridentType_TT_HOST_POD, tridentcommon.TridentType_TT_VM_POD, tridentcommon.TridentType_TT_K8S_SIDECAR:
-						genesisSyncData = vUpdater.UnmarshalKubernetesProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, info.Message)
-					default:
-						genesisSyncData = vUpdater.UnmarshalProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, info.Message)
-					}
-				} else if info.AgentMessage != nil {
-					agentType := info.AgentMessage.GetAgentType()
-					switch agentType {
-					case agent.AgentType_TT_PHYSICAL_MACHINE:
-						genesisSyncData = vUpdater.UnmarshalAgentWorkloadProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, common.DEVICE_TYPE_PHYSICAL_MACHINE, info.AgentMessage)
-					case agent.AgentType_TT_PUBLIC_CLOUD:
-						genesisSyncData = vUpdater.UnmarshalAgentWorkloadProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, common.DEVICE_TYPE_PUBLIC_CLOUD, info.AgentMessage)
-					case agent.AgentType_TT_HOST_POD, agent.AgentType_TT_VM_POD, agent.AgentType_TT_K8S_SIDECAR:
-						genesisSyncData = vUpdater.UnmarshalAgentKubernetesProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, info.AgentMessage)
-					default:
-						genesisSyncData = vUpdater.UnmarshalAgentProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, info.AgentMessage)
-					}
-				} else {
+				if info.Message == nil {
 					log.Errorf("genesis sync message data is nil, vtap_id (%d)", info.VtapID, logger.NewORGPrefix(info.ORGID))
 					continue
+				}
+				agentType := info.Message.GetAgentType()
+				switch agentType {
+				case agent.AgentType_TT_PHYSICAL_MACHINE:
+					genesisSyncData = vUpdater.UnmarshalWorkloadProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, common.DEVICE_TYPE_PHYSICAL_MACHINE, info.Message)
+				case agent.AgentType_TT_PUBLIC_CLOUD:
+					genesisSyncData = vUpdater.UnmarshalWorkloadProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, common.DEVICE_TYPE_PUBLIC_CLOUD, info.Message)
+				case agent.AgentType_TT_HOST_POD, agent.AgentType_TT_VM_POD, agent.AgentType_TT_K8S_SIDECAR:
+					genesisSyncData = vUpdater.UnmarshalKubernetesProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, info.Message)
+				default:
+					genesisSyncData = vUpdater.UnmarshalProtobuf(info.ORGID, info.TeamID, info.VtapID, info.Peer, info.Message)
 				}
 
 				if info.VtapID != 0 {
