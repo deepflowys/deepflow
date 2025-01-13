@@ -622,6 +622,7 @@ pub struct YamlConfig {
     pub max_sockets_tolerate_interval: Duration,
     pub check_core_file_disabled: bool,
     pub memory_trim_disabled: bool,
+    pub page_cache_reclaim_percentage: u8,
     pub forward_capacity: usize,
     pub fast_path_disabled: bool,
     // rrt timeout must gt aggr SLOT_WIDTH
@@ -1051,6 +1052,7 @@ impl Default for YamlConfig {
             max_sockets_tolerate_interval: Duration::from_secs(60),
             check_core_file_disabled: false,
             memory_trim_disabled: false,
+            page_cache_reclaim_percentage: 100,
             fast_path_disabled: false,
             forward_capacity: 1 << 14,
             rrt_tcp_timeout: Duration::from_secs(1800),

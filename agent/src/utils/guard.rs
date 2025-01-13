@@ -296,6 +296,8 @@ impl Guard {
         let cgroups_available = is_kernel_available_for_cgroups();
         let in_container = running_in_container();
         let cgroups_disabled = self.cgroups_disabled;
+        #[cfg(target_os = "linux")]
+        let mut last_page_reclaim = Instant::now();
 
         let thread = thread::Builder::new().name("guard".to_owned()).spawn(move || {
             let mut system_load = SystemLoadGuard::new(system.clone(), exception_handler.clone());
@@ -375,6 +377,12 @@ impl Guard {
                 #[cfg(all(target_os = "linux", target_env = "gnu"))]
                 if !memory_trim_disabled {
                     unsafe { let _ = malloc_trim(0); }
+                }
+
+                #[cfg(target_os = "linux")]
+                if last_page_reclaim.elapsed() >= Duration::from_secs(60) {
+                    last_page_reclaim = Instant::now();
+                    let _ = crate::utils::cgroups::page_cache_reclaim_check(config.page_cache_reclaim_percentage);
                 }
 
                 // Periodic memory checks are necessary:

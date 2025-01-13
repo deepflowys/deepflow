@@ -189,6 +189,7 @@ type StaticConfig struct {
 	CheckCoreFileDisabled              *bool                        `yaml:"check-core-file-disabled,omitempty"`
 	SoPlugins                          []string                     `yaml:"so-plugins,omitempty"`
 	MemoryTrimDisabled                 *bool                        `yaml:"memory-trim-disabled,omitempty"`
+	PageCacheReclaimPercentage         *int                         `yaml:"page-cache-reclaim-percentage,omitempty"`
 	FastPathDisabled                   *bool                        `yaml:"fast-path-disabled,omitempty"`
 	ForwardCapacity                    *uint32                      `yaml:"forward-capacity,omitempty"`
 	RrtTcpTimeout                      *string                      `yaml:"rrt-tcp-timeout,omitempty"`

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -24,9 +25,14 @@ use crate::config::handler::EnvironmentAccess;
 use crate::utils::environment::is_kernel_available;
 
 use arc_swap::access::Access;
-use cgroups_rs::cgroup_builder::*;
-use cgroups_rs::*;
-use log::{info, warn};
+use cgroups_rs::{
+    cgroup_builder::CgroupBuilder,
+    cpu::CpuController,
+    hierarchies,
+    memory::{MemController, Memory},
+    Cgroup, CgroupPid, Controller, CpuResources, MemoryResources, Resources,
+};
+use log::{debug, info, trace, warn};
 use public::consts::{DEFAULT_CPU_CFS_PERIOD_US, PROCESS_NAME};
 
 pub struct Cgroups {
@@ -40,32 +46,26 @@ pub struct Cgroups {
 
 const CHECK_INTERVAL: Duration = Duration::from_secs(1);
 
+fn cgroups_supported() -> bool {
+    let Ok(fs) = fs::read_to_string("/proc/filesystems") else {
+        return false;
+    };
+    fs.lines()
+        .any(|line| line.to_lowercase().contains("cgroup"))
+}
+
 impl Cgroups {
     /// 创建cgroup hierarchy
     pub fn new(pid: u64, config: EnvironmentAccess) -> Result<Self, Error> {
-        let contents = match fs::read_to_string("/proc/filesystems") {
-            Ok(file_contents) => file_contents,
-            Err(e) => {
-                return Err(Error::CgroupsNotSupported(e.to_string()));
-            }
-        };
-        let mut cgroup_supported = false;
-        for line in contents.lines() {
-            // 检查系统是否支持cgroup
-            if line.to_lowercase().contains("cgroup") {
-                cgroup_supported = true;
-                break;
-            }
-        }
-        if !cgroup_supported {
-            return Err(Error::CgroupsNotSupported(format!(
-                "cgroups v1 or v2 is not found."
-            )));
+        if !cgroups_supported() {
+            return Err(Error::CgroupsNotSupported(
+                "read /proc/filesystems failed or cgroups/cgroups2 not found.".to_string(),
+            ));
         }
         let hier = hierarchies::auto();
         let is_v2 = hier.v2();
         let cg: Cgroup = CgroupBuilder::new(PROCESS_NAME).build(hier);
-        let cpus: &cpu::CpuController = match cg.controller_of() {
+        let cpus: &CpuController = match cg.controller_of() {
             Some(controller) => controller,
             None => {
                 return Err(Error::CpuControllerSetFailed(format!(
@@ -73,7 +73,7 @@ impl Cgroups {
                 )));
             }
         };
-        let mem: &memory::MemController = match cg.controller_of() {
+        let mem: &MemController = match cg.controller_of() {
             Some(controller) => controller,
             None => {
                 return Err(Error::MemControllerSetFailed(format!(
@@ -228,4 +228,132 @@ pub fn is_cgroup_procs_writable() -> bool {
     // https://github.com/torvalds/linux/commit/74a1166dfe1135dcc168d35fa5261aa7e087011b
     const MIN_KERNEL_VERSION_CGROUP_PROCS: &str = "3";
     is_kernel_available(MIN_KERNEL_VERSION_CGROUP_PROCS)
+}
+
+const PID1_ROOT: &str = "/proc/1/root";
+
+/*
+ * The path of container memory cgroup from its own namespace is `/sys/fs/cgroup/memory`.
+ * However, the path is mounted read-only, making it impossible to reclaim memory cache with:
+ *
+ *     `echo 0 > /sys/fs/cgroup/memory/memory.force_empty`
+ *
+ * The approach here is to take a little detour, visiting the actual memory cgroup path from global cgroup namespace.
+ * The path would be:
+ *
+ *     /proc/1/root/{memory_cgroup_mount_point}/{cgroup_path}/memory.force_empty
+ */
+fn get_memory_cgroup_path() -> procfs::ProcResult<Option<PathBuf>> {
+    let mut path = PathBuf::from(PID1_ROOT);
+    let proc = procfs::process::Process::myself()?;
+
+    let Some(mount_info) = proc
+        .mountinfo()?
+        .into_iter()
+        .find(|m| m.fs_type == "cgroup" && m.super_options.contains_key("memory"))
+    else {
+        debug!("memory cgroup not found");
+        return Ok(None);
+    };
+    trace!(
+        "memory cgroup mount point: {}",
+        mount_info.mount_point.display()
+    );
+    let mut mount_point = mount_info.mount_point.components();
+    mount_point.next(); // skip "/"
+    path.extend(mount_point);
+
+    let Some(cg_info) = proc
+        .cgroups()?
+        .into_iter()
+        .find(|cg| cg.controllers.iter().any(|c| c == "memory"))
+    else {
+        return Ok(None);
+    };
+    trace!("memory cgroup path: {}", cg_info.pathname);
+    if cg_info.pathname == "/" {
+        debug!("memory cgroup is mounted on root");
+        return Ok(None);
+    }
+    let mut cg_path = Path::new(&cg_info.pathname).components();
+    cg_path.next(); // skip "/"
+    path.extend(cg_path);
+
+    trace!("memory cgroup path: {}", path.display());
+    Ok(Some(path))
+}
+
+fn cgroups_v1_check() -> bool {
+    if !cgroups_supported() {
+        debug!("cgroups not supported for this system");
+        return false;
+    }
+    if hierarchies::is_cgroup2_unified_mode() {
+        debug!("cgroups v2 is not supported");
+        return false;
+    }
+
+    true
+}
+
+pub(crate) fn memory_info() -> Option<Memory> {
+    if !cgroups_v1_check() {
+        return None;
+    }
+
+    let mem_mount = match get_memory_cgroup_path() {
+        Ok(Some(path)) => path,
+        Ok(None) => {
+            debug!("cgroups memory mount point not found or is invalid");
+            return None;
+        }
+        Err(e) => {
+            warn!("get memory path failed: {e}");
+            return None;
+        }
+    };
+
+    Some(MemController::new(mem_mount.clone(), false).memory_stat())
+}
+
+pub(crate) fn page_cache_reclaim_check(threshold: u8) -> bool {
+    if threshold >= 100 {
+        return false;
+    }
+    if !cgroups_v1_check() {
+        return false;
+    }
+
+    let mem_mount = match get_memory_cgroup_path() {
+        Ok(Some(path)) => path,
+        Ok(None) => {
+            debug!("cgroups memory mount point not found or is invalid");
+            return false;
+        }
+        Err(e) => {
+            warn!("get memory path failed: {e}");
+            return false;
+        }
+    };
+    let mc = MemController::new(mem_mount.clone(), false);
+    let mut reclaim_path = mem_mount;
+    reclaim_path.set_file_name("memory.force_empty");
+
+    let m_stat = mc.memory_stat();
+    let percentage = m_stat.stat.cache * 100 / m_stat.limit_in_bytes as u64;
+    if percentage < threshold as u64 {
+        debug!("cache / limit = {percentage}% < {threshold}%");
+        return false;
+    }
+
+    debug!("cache before reclaim: {}", m_stat.stat.cache);
+    if let Err(e) = fs::write(&reclaim_path, b"0") {
+        warn!(
+            "reclaim memory cache write to {} failed: {e}",
+            reclaim_path.display()
+        );
+        return false;
+    }
+    debug!("cache after reclaim: {}", mc.memory_stat().stat.cache);
+    true
 }

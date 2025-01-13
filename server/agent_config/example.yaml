@@ -1690,6 +1690,25 @@ vtap_group_id: g-xxxxxx
   ##   Using memory trimming can effectively reduce memory usage, but there may be performance loss
   #memory-trim-disabled: false
 
+  ####################################
+  ## Page Cache Reclaim Percentage  ##
+  ####################################
+  ## The percentage threshold of page cache to cgroup memory limit that triggers reclaim.
+  ## Default: 100. Unit: percentage. Range: [0, 100].
+  ## Note:
+  ##   A page cache reclaim is triggered when the percentage of page cache and
+  ##   cgroups memory.limit_in_bytes exceeds this value.
+  ##   Both anonymous memory and file page cache are accounted for in cgroup's memory usage.
+  ##   Under some circumstances, page cache alone can cause cgroup to OOM kill agent process.
+  ##   To avoid this, agent can reclaim page cache periodically. Although reclaming may not
+  ##   cause performance issues for agent who doesn't have much I/O, other processes in
+  ##   the same cgroup may be affected. Very low values are not recommended.
+  ##   Note:
+  ##     - This feature is available for cgroups v1 only.
+  ##     - This feature is disabled if agent memory cgroup path is "/".
+  ##     - The minimal interval of reclaims is 1 minute.
+  #page-cache-reclaim-percentage: 100
+
   #####################
   ## Check core file ##
   #####################

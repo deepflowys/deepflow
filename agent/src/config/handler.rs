@@ -211,6 +211,7 @@ pub struct EnvironmentConfig {
     pub system_load_circuit_breaker_threshold: f32,
     pub system_load_circuit_breaker_recover: f32,
     pub system_load_circuit_breaker_metric: trident::SystemLoadMetric,
+    pub page_cache_reclaim_percentage: u8,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -1466,6 +1467,7 @@ impl TryFrom<(Config, RuntimeConfig)> for ModuleConfig {
                 system_load_circuit_breaker_threshold: conf.system_load_circuit_breaker_threshold,
                 system_load_circuit_breaker_recover: conf.system_load_circuit_breaker_recover,
                 system_load_circuit_breaker_metric: conf.system_load_circuit_breaker_metric,
+                page_cache_reclaim_percentage: conf.yaml_config.page_cache_reclaim_percentage,
             },
             synchronizer: SynchronizerConfig {
                 sync_interval: Duration::from_secs(conf.sync_interval),
@@ -2628,6 +2630,17 @@ impl ConfigHandler {
                 .environment
                 .system_load_circuit_breaker_threshold =
                 new_config.environment.system_load_circuit_breaker_threshold;
+        }
+        if candidate_config.environment.page_cache_reclaim_percentage
+            != new_config.environment.page_cache_reclaim_percentage
+        {
+            info!(
+                "Update page_cache_reclaim_percentage from {:?} to {:?}.",
+                candidate_config.environment.page_cache_reclaim_percentage,
+                new_config.environment.page_cache_reclaim_percentage
+            );
+            candidate_config.environment.page_cache_reclaim_percentage =
+                new_config.environment.page_cache_reclaim_percentage;
         }
 
         if candidate_config.flow != new_config.flow {
