@@ -212,9 +212,11 @@ var CH_IP_RESOURCE_TAGS = []string{
 }
 
 const (
+	SOURCE_MYSQL                  = "MYSQL"
+	SOURCE_POSTGRESQL             = "POSTGRESQL"
 	SQL_CREATE_DICT               = "CREATE DICTIONARY %s.%s\n"
 	SQL_REPLICA                   = "REPLICA (HOST '%s' PRIORITY 1)"
-	SQL_SOURCE_MYSQL              = "SOURCE(MYSQL(PORT %d USER '%s' PASSWORD '%s' %s DB %s TABLE %s INVALIDATE_QUERY 'select(select updated_at from %s order by updated_at desc limit 1) as updated_at'))\n"
+	SQL_SOURCE_MYSQL              = "SOURCE(%s(%sPORT %d USER '%s' PASSWORD '%s' %sDB %s TABLE %s INVALIDATE_QUERY 'select(select updated_at from %s order by updated_at desc limit 1) as updated_at'))\n"
 	SQL_LIFETIME                  = "LIFETIME(MIN 30 MAX %d)\n"
 	SQL_LAYOUT_FLAT               = "LAYOUT(FLAT())"
 	SQL_LAYOUT_COMPLEX_KEY_HASHED = "LAYOUT(COMPLEX_KEY_HASHED())"

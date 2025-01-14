@@ -148,20 +148,36 @@ func (c *Dictionary) Update() {
 }
 
 func (c *Dictionary) update(clickHouseCfg *clickhouse.ClickHouseConfig) {
-	var mysqlDatabaseName string
-	var ckDatabaseName string
 	// 在本区域所有数据节点更新字典
 	// Update the dictionary at all data nodes in the region
-	var replicaSQL string
-	var mysqlPort uint32
-	if c.cfg.MySqlCfg.ProxyHost != "" {
-		replicaSQL = fmt.Sprintf(SQL_REPLICA, c.cfg.MySqlCfg.ProxyHost)
-		mysqlPort = c.cfg.MySqlCfg.ProxyPort
-	} else {
-		replicaSQL = fmt.Sprintf(SQL_REPLICA, c.cfg.MySqlCfg.Host)
-		mysqlPort = c.cfg.MySqlCfg.Port
+	sqlDatabaseName := c.cfg.MySqlCfg.Database
+	ckDatabaseName := c.cfg.ClickHouseCfg.Database
+	sqlSource := SOURCE_MYSQL
+	replicaSQL := ""
+	username := c.cfg.MySqlCfg.UserName
+	password := c.cfg.MySqlCfg.UserPassword
+	host := ""
+	var port uint32
+	if c.cfg.PostgreSQLCfg.Enabled {
+		sqlSource = SOURCE_POSTGRESQL
+		username = c.cfg.PostgreSQLCfg.UserName
+		password = c.cfg.PostgreSQLCfg.UserPassword
+		if c.cfg.PostgreSQLCfg.ProxyHost != "" {
+			host = c.cfg.PostgreSQLCfg.ProxyHost
+			port = c.cfg.PostgreSQLCfg.ProxyPort
+		} else {
+			host = c.cfg.PostgreSQLCfg.Host
+			port = c.cfg.PostgreSQLCfg.Port
+		}
+	} else if c.cfg.MySqlCfg.Enabled {
+		if c.cfg.MySqlCfg.ProxyHost != "" {
+			replicaSQL = fmt.Sprintf(SQL_REPLICA, c.cfg.MySqlCfg.ProxyHost) + " "
+			port = c.cfg.MySqlCfg.ProxyPort
+		} else {
+			replicaSQL = fmt.Sprintf(SQL_REPLICA, c.cfg.MySqlCfg.Host) + " "
+			port = c.cfg.MySqlCfg.Port
+		}
 	}
-
 	ckDb, err := clickhouse.Connect(*clickHouseCfg)
 	if err != nil {
 		log.Error(err)
@@ -238,12 +254,9 @@ func (c *Dictionary) update(clickHouseCfg *clickhouse.ClickHouseConfig) {
 	}
 
 	for _, orgID := range orgIDs {
-		if orgID == mysqlCommon.DEFAULT_ORG_ID {
-			mysqlDatabaseName = c.cfg.MySqlCfg.Database
-			ckDatabaseName = c.cfg.ClickHouseCfg.Database
-		} else {
-			mysqlDatabaseName = "`" + fmt.Sprintf(mysqlCommon.DATABASE_PREFIX_ALIGNMENT, orgID) + "_" + c.cfg.MySqlCfg.Database + "`"
-			ckDatabaseName = "`" + fmt.Sprintf(mysqlCommon.DATABASE_PREFIX_ALIGNMENT, orgID) + "_" + c.cfg.ClickHouseCfg.Database + "`"
+		if orgID != mysqlCommon.DEFAULT_ORG_ID {
+			sqlDatabaseName = "`" + fmt.Sprintf(mysqlCommon.DATABASE_PREFIX_ALIGNMENT, orgID) + "_" + sqlDatabaseName + "`"
+			ckDatabaseName = "`" + fmt.Sprintf(mysqlCommon.DATABASE_PREFIX_ALIGNMENT, orgID) + "_" + ckDatabaseName + "`"
 		}
 		var databases []string
 		// 检查并创建数据库
@@ -313,7 +326,7 @@ func (c *Dictionary) update(clickHouseCfg *clickhouse.ClickHouseConfig) {
 			dictName := dict.(string)
 			chTable := "ch_" + strings.TrimSuffix(dictName, "_map")
 			createSQL := CREATE_SQL_MAP[dictName]
-			createSQL = fmt.Sprintf(createSQL, ckDatabaseName, dictName, mysqlPort, c.cfg.MySqlCfg.UserName, c.cfg.MySqlCfg.UserPassword, replicaSQL, mysqlDatabaseName, chTable, chTable, c.cfg.TagRecorderCfg.DictionaryRefreshInterval)
+			createSQL = fmt.Sprintf(createSQL, ckDatabaseName, dictName, sqlSource, host, port, username, password, replicaSQL, sqlDatabaseName, chTable, chTable, c.cfg.TagRecorderCfg.DictionaryRefreshInterval)
 			log.Infof("create dictionary %s", dictName, logger.NewORGPrefix(orgID))
 			log.Info(createSQL, logger.NewORGPrefix(orgID))
 			_, err = ckDb.Exec(createSQL)
@@ -344,9 +357,9 @@ func (c *Dictionary) update(clickHouseCfg *clickhouse.ClickHouseConfig) {
 				break
 			}
 			createSQL := CREATE_SQL_MAP[dictName]
-			createSQL = fmt.Sprintf(createSQL, ckDatabaseName, dictName, mysqlPort, c.cfg.MySqlCfg.UserName, c.cfg.MySqlCfg.UserPassword, replicaSQL, mysqlDatabaseName, chTable, chTable, c.cfg.TagRecorderCfg.DictionaryRefreshInterval)
+			createSQL = fmt.Sprintf(createSQL, ckDatabaseName, dictName, sqlSource, host, port, username, password, replicaSQL, sqlDatabaseName, chTable, chTable, c.cfg.TagRecorderCfg.DictionaryRefreshInterval)
 			// In the new version of CK (version after 23.8), when ‘SHOW CREATE DICTIONARY’ does not display plain text password information, the password is fixedly displayed as ‘[HIDDEN]’, and password comparison needs to be repair.
-			checkDictSQL := strings.Replace(dictSQL[0], "[HIDDEN]", c.cfg.MySqlCfg.UserPassword, 1)
+			checkDictSQL := strings.Replace(dictSQL[0], "[HIDDEN]", password, 1)
 			if createSQL == checkDictSQL {
 				continue
 			}
