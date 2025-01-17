@@ -20,6 +20,7 @@ import (
 
 	"github.com/ClickHouse/ch-go/proto"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 )
 
 type ProfileBlock struct {
@@ -65,6 +66,7 @@ type ProfileBlock struct {
 	ColL3DeviceId             proto.ColUInt32
 	ColServiceId              proto.ColUInt32
 	ColTeamId                 proto.ColUInt16
+	*nativetag.NativeTagsBlock
 }
 
 func (b *ProfileBlock) Reset() {
@@ -110,10 +112,13 @@ func (b *ProfileBlock) Reset() {
 	b.ColL3DeviceId.Reset()
 	b.ColServiceId.Reset()
 	b.ColTeamId.Reset()
+	if b.NativeTagsBlock != nil {
+		b.NativeTagsBlock.Reset()
+	}
 }
 
 func (b *ProfileBlock) ToInput(input proto.Input) proto.Input {
-	return append(input,
+	input = append(input,
 		proto.InputColumn{Name: ckdb.COLUMN_TIME, Data: &b.ColTime},
 		proto.InputColumn{Name: ckdb.COLUMN__ID, Data: &b.ColId},
 		proto.InputColumn{Name: ckdb.COLUMN_IP4, Data: &b.ColIp4},
@@ -157,6 +162,10 @@ func (b *ProfileBlock) ToInput(input proto.Input) proto.Input {
 		proto.InputColumn{Name: ckdb.COLUMN_SERVICE_ID, Data: &b.ColServiceId},
 		proto.InputColumn{Name: ckdb.COLUMN_TEAM_ID, Data: &b.ColTeamId},
 	)
+	if b.NativeTagsBlock != nil {
+		input = b.NativeTagsBlock.ToInput(input)
+	}
+	return input
 }
 
 func (n *InProcessProfile) NewColumnBlock() ckdb.CKColumnBlock {
@@ -169,6 +178,7 @@ func (n *InProcessProfile) NewColumnBlock() ckdb.CKColumnBlock {
 		ColCompressionAlgo:     new(proto.ColStr).LowCardinality(),
 		ColTagNames:            new(proto.ColStr).LowCardinality().Array(),
 		ColTagValues:           new(proto.ColStr).Array(),
+		NativeTagsBlock:        nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.PROFILE),
 	}
 }
 
@@ -216,4 +226,7 @@ func (n *InProcessProfile) AppendToColumnBlock(b ckdb.CKColumnBlock) {
 	block.ColL3DeviceId.Append(n.L3DeviceID)
 	block.ColServiceId.Append(n.ServiceID)
 	block.ColTeamId.Append(n.TeamID)
+	if block.NativeTagsBlock != nil {
+		block.NativeTagsBlock.AppendToColumnBlock(n.TagNames, n.TagValues, nil, nil)
+	}
 }

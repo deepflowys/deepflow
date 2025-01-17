@@ -56,6 +56,7 @@ type Document interface {
 
 	NewColumnBlock() ckdb.CKColumnBlock
 	AppendToColumnBlock(ckdb.CKColumnBlock)
+	NativeTagVersion() uint32
 }
 
 type DocumentBase struct {
@@ -79,6 +80,10 @@ func (b *DocumentBase) Flag() DocumentFlag {
 
 func (b *DocumentBase) TableID() (uint8, error) {
 	return b.Tag.TableID((b.Flags & FLAG_PER_SECOND_METRICS) == 1)
+}
+
+func (b *DocumentBase) NativeTagVersion() uint32 {
+	return 0
 }
 
 func (b *DocumentBase) OrgID() uint16 {

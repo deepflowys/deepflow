@@ -31,6 +31,10 @@ type AppServiceTag struct {
 	OrgId       uint16
 }
 
+func (t *AppServiceTag) NativeTagVersion() uint32 {
+	return 0
+}
+
 func (t *AppServiceTag) OrgID() uint16 {
 	return t.OrgId
 }

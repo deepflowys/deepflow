@@ -53,6 +53,10 @@ func L4PacketColumns() []*ckdb.Column {
 	}
 }
 
+func (s *L4Packet) NativeTagVersion() uint32 {
+	return 0
+}
+
 func (s *L4Packet) OrgID() uint16 {
 	return s.OrgId
 }

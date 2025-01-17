@@ -28,6 +28,7 @@ import (
 	"github.com/deepflowio/deepflow/server/ingester/flow_tag"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
 	"github.com/deepflowio/deepflow/server/libs/grpc"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 	"github.com/deepflowio/deepflow/server/libs/pool"
 	"github.com/deepflowio/deepflow/server/libs/utils"
 )
@@ -203,6 +204,10 @@ func GenProfileCKTable(cluster, dbName, tableName, storagePolicy, ckdbType strin
 		OrderKeys:       orderKeys,
 		PrimaryKeyCount: len(orderKeys),
 	}
+}
+
+func (p *InProcessProfile) NativeTagVersion() uint32 {
+	return nativetag.GetTableNativeTagsVersion(p.OrgId, nativetag.PROFILE)
 }
 
 func (p *InProcessProfile) OrgID() uint16 {

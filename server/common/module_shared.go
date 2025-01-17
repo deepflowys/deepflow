@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/deepflowio/deepflow/server/libs/eventapi"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 	"github.com/deepflowio/deepflow/server/libs/queue"
 	"github.com/deepflowio/deepflow/server/libs/tracetree"
 	logging "github.com/op/go-logging"
@@ -84,6 +85,7 @@ func ExportersEnabled(configPath string) bool {
 
 type OrgHanderInterface interface {
 	DropOrg(orgId uint16) error
+	UpdateNativeTag(uint16, nativetag.NativeTagTable, *nativetag.NativeTag) error
 }
 
 var ingesterOrgHanders []OrgHanderInterface
@@ -122,5 +124,31 @@ func DropOrg(orgId uint16) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// 1. When starting, you need to call the interface, and set 'isStartUp' to 'true'.
+// 2. When adding or removing native_tag, you need to call the interface, and set 'isStartUp' to 'false'
+func UpdateNativeTag(isStartUp bool, orgId uint16, table nativetag.NativeTagTable, nativeTag *nativetag.NativeTag) error {
+	log.Infof("isstart %v orgId %d update %s native tag: %+v", isStartUp, orgId, table.Table(), nativeTag)
+	if nativeTag == nil {
+		return nil
+	}
+
+	if !isStartUp {
+		if ingesterOrgHanders == nil {
+			err := fmt.Errorf("ingester is not ready, update native tag failed")
+			log.Error(err)
+			return err
+		}
+		for _, ingesterOrgHander := range ingesterOrgHanders {
+			err := ingesterOrgHander.UpdateNativeTag(orgId, table, nativeTag)
+			if err != nil {
+				log.Error(err)
+				return err
+			}
+		}
+	}
+	nativetag.UpdateNativeTag(orgId, table, nativeTag)
 	return nil
 }

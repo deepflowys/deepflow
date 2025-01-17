@@ -20,6 +20,7 @@ import (
 
 	"github.com/ClickHouse/ch-go/proto"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 )
 
 type LogBlock struct {
@@ -61,6 +62,7 @@ type LogBlock struct {
 	ColAttributeValues  *proto.ColArr[string]
 	ColMetricsNames     *proto.ColArr[string]
 	ColMetricsValues    *proto.ColArr[float64]
+	*nativetag.NativeTagsBlock
 }
 
 func (b *LogBlock) Reset() {
@@ -102,10 +104,13 @@ func (b *LogBlock) Reset() {
 	b.ColAttributeValues.Reset()
 	b.ColMetricsNames.Reset()
 	b.ColMetricsValues.Reset()
+	if b.NativeTagsBlock != nil {
+		b.NativeTagsBlock.Reset()
+	}
 }
 
 func (b *LogBlock) ToInput(input proto.Input) proto.Input {
-	return append(input,
+	input = append(input,
 		proto.InputColumn{Name: ckdb.COLUMN_TIME, Data: &b.ColTime},
 		proto.InputColumn{Name: ckdb.COLUMN_TIMESTAMP, Data: &b.ColTimestamp},
 		proto.InputColumn{Name: ckdb.COLUMN__ID, Data: &b.ColId},
@@ -145,16 +150,22 @@ func (b *LogBlock) ToInput(input proto.Input) proto.Input {
 		proto.InputColumn{Name: ckdb.COLUMN_METRICS_NAMES, Data: b.ColMetricsNames},
 		proto.InputColumn{Name: ckdb.COLUMN_METRICS_VALUES, Data: b.ColMetricsValues},
 	)
+	if b.NativeTagsBlock != nil {
+		input = b.NativeTagsBlock.ToInput(input)
+	}
+	return input
 }
 
 func (n *ApplicationLogStore) NewColumnBlock() ckdb.CKColumnBlock {
-	return &LogBlock{
+	block := &LogBlock{
 		ColAppService:      new(proto.ColStr).LowCardinality(),
 		ColAttributeNames:  new(proto.ColStr).LowCardinality().Array(),
 		ColAttributeValues: new(proto.ColStr).Array(),
 		ColMetricsNames:    new(proto.ColStr).LowCardinality().Array(),
 		ColMetricsValues:   new(proto.ColFloat64).Array(),
+		NativeTagsBlock:    nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.APPLICATION_LOG),
 	}
+	return block
 }
 
 func (n *ApplicationLogStore) AppendToColumnBlock(b ckdb.CKColumnBlock) {
@@ -197,4 +208,7 @@ func (n *ApplicationLogStore) AppendToColumnBlock(b ckdb.CKColumnBlock) {
 	block.ColAttributeValues.Append(n.AttributeValues)
 	block.ColMetricsNames.Append(n.MetricsNames)
 	block.ColMetricsValues.Append(n.MetricsValues)
+	if block.NativeTagsBlock != nil {
+		block.NativeTagsBlock.AppendToColumnBlock(n.AttributeNames, n.AttributeValues, n.MetricsNames, n.MetricsValues)
+	}
 }

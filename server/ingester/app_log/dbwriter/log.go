@@ -26,6 +26,7 @@ import (
 	"github.com/deepflowio/deepflow/server/ingester/exporters/config"
 	"github.com/deepflowio/deepflow/server/ingester/flow_tag"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 	"github.com/deepflowio/deepflow/server/libs/pool"
 )
 
@@ -112,6 +113,10 @@ type ApplicationLogStore struct {
 
 	MetricsNames  []string  `json:"metrics_names" category:"$metrics" data_type:"[]string"`
 	MetricsValues []float64 `json:"metrics_values" category:"$metrics" data_type:"[]float64"`
+}
+
+func (l *ApplicationLogStore) NativeTagVersion() uint32 {
+	return nativetag.GetTableNativeTagsVersion(l.OrgId, nativetag.APPLICATION_LOG)
 }
 
 func (l *ApplicationLogStore) OrgID() uint16 {

@@ -117,6 +117,10 @@ type FlowTag struct {
 	FlowTagInfo
 }
 
+func (t *FlowTag) NativeTagVersion() uint32 {
+	return 0
+}
+
 func (t *FlowTag) OrgID() uint16 {
 	return t.OrgId
 }

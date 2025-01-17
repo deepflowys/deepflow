@@ -20,6 +20,7 @@ import (
 
 	"github.com/ClickHouse/ch-go/proto"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 )
 
 type L7BaseBlock struct {
@@ -235,6 +236,7 @@ type L7FlowLogBlock struct {
 	ColMetricsNames         *proto.ColArr[string]
 	ColMetricsValues        *proto.ColArr[float64]
 	ColEvents               proto.ColStr
+	*nativetag.NativeTagsBlock
 }
 
 func (b *L7FlowLogBlock) Reset() {
@@ -276,11 +278,14 @@ func (b *L7FlowLogBlock) Reset() {
 	b.ColMetricsNames.Reset()
 	b.ColMetricsValues.Reset()
 	b.ColEvents.Reset()
+	if b.NativeTagsBlock != nil {
+		b.NativeTagsBlock.Reset()
+	}
 }
 
 func (b *L7FlowLogBlock) ToInput(input proto.Input) proto.Input {
 	input = b.L7BaseBlock.ToInput(input)
-	return append(input,
+	input = append(input,
 		proto.InputColumn{Name: ckdb.COLUMN__ID, Data: &b.ColId},
 		proto.InputColumn{Name: ckdb.COLUMN_L7_PROTOCOL, Data: &b.ColL7Protocol},
 		proto.InputColumn{Name: ckdb.COLUMN_L7_PROTOCOL_STR, Data: b.ColL7ProtocolStr},
@@ -319,6 +324,10 @@ func (b *L7FlowLogBlock) ToInput(input proto.Input) proto.Input {
 		proto.InputColumn{Name: ckdb.COLUMN_METRICS_VALUES, Data: b.ColMetricsValues},
 		proto.InputColumn{Name: ckdb.COLUMN_EVENTS, Data: &b.ColEvents},
 	)
+	if b.NativeTagsBlock != nil {
+		return b.NativeTagsBlock.ToInput(input)
+	}
+	return input
 }
 
 func (n *L7FlowLog) NewColumnBlock() ckdb.CKColumnBlock {
@@ -339,6 +348,7 @@ func (n *L7FlowLog) NewColumnBlock() ckdb.CKColumnBlock {
 		ColAttributeValues: new(proto.ColStr).Array(),
 		ColMetricsNames:    new(proto.ColStr).LowCardinality().Array(),
 		ColMetricsValues:   new(proto.ColFloat64).Array(),
+		NativeTagsBlock:    nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.L7_FLOW_LOG),
 	}
 }
 
@@ -382,4 +392,7 @@ func (n *L7FlowLog) AppendToColumnBlock(b ckdb.CKColumnBlock) {
 	block.ColMetricsNames.Append(n.MetricsNames)
 	block.ColMetricsValues.Append(n.MetricsValues)
 	block.ColEvents.Append(n.Events)
+	if block.NativeTagsBlock != nil {
+		block.NativeTagsBlock.AppendToColumnBlock(n.AttributeNames, n.AttributeValues, n.MetricsNames, n.MetricsValues)
+	}
 }

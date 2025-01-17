@@ -849,6 +849,10 @@ func L4FlowLogColumns() []*ckdb.Column {
 	return columns
 }
 
+func (f *L4FlowLog) NativeTagVersion() uint32 {
+	return 0
+}
+
 func (f *L4FlowLog) OrgID() uint16 {
 	return f.KnowledgeGraph.OrgId
 }
