@@ -250,6 +250,10 @@ controller:
           daily_trigger_time: ""
           # 关闭 lb 监听器及后端主机对接
           disable_sync_lb_listener: false
+        # fc配置
+        fusioncompute_config:
+          # 对接 fusioncompute 定时执行，根据配置的时间点每日执行一次，配置后循环执行失效，格式：%H:%M ，例：05:30 ，每日5点30分执行一次对接
+          daily_trigger_time: ""
       recorder:
         # recorder模块缓存自愈刷新时间间隔，单位：分钟
         cache_refresh_interval: 60

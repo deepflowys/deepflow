@@ -117,7 +117,7 @@ func (d *domain) tryRefresh(cloudData cloudmodel.Resource) error {
 
 func (d *domain) shouldRefresh(cloudData cloudmodel.Resource) error {
 	if cloudData.Verified {
-		if (d.metadata.Domain.Type != common.CLOUD_TOWER && len(cloudData.Networks) == 0) || len(cloudData.VInterfaces) == 0 {
+		if ((d.metadata.Domain.Type != common.CLOUD_TOWER && d.metadata.Domain.Type != common.FUSIONCOMPUTE) && len(cloudData.Networks) == 0) || len(cloudData.VInterfaces) == 0 {
 			log.Info("domain has no networks or vinterfaces, does nothing", d.metadata.LogPrefixes)
 			return DataMissingError
 		}

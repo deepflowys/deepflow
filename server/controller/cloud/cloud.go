@@ -78,11 +78,19 @@ func NewCloud(orgID int, domain metadbmodel.Domain, cfg config.CloudConfig, ctx 
 	}
 
 	// maybe all types will be supported later
+	var triggerTimeString string
+	switch domain.Type {
+	case common.QINGCLOUD, common.QINGCLOUD_PRIVATE:
+		triggerTimeString = cfg.QingCloudConfig.DailyTriggerTime
+	case common.FUSIONCOMPUTE:
+		triggerTimeString = cfg.FusionComputeConfig.DailyTriggerTime
+	default:
+	}
 	var triggerTime time.Time
-	if domain.Type == common.QINGCLOUD || domain.Type == common.QINGCLOUD_PRIVATE {
-		triggerTime, err = time.ParseInLocation("15:04", cfg.QingCloudConfig.DailyTriggerTime, time.Local)
+	if triggerTimeString != "" {
+		triggerTime, err = time.ParseInLocation("15:04", triggerTimeString, time.Local)
 		if err != nil {
-			log.Errorf("parse qing config daily trigger time failed: (%s)", err.Error(), logger.NewORGPrefix(orgID))
+			log.Errorf("parse cloud (%s) daily trigger time config failed: (%s)", domain.Name, err.Error(), logger.NewORGPrefix(orgID))
 		}
 	}
 
@@ -282,8 +290,8 @@ func (c *Cloud) GetStatter() statsd.StatsdStatter {
 }
 
 func (c *Cloud) getCloudGatherInterval() int {
-	if (c.basicInfo.Type == common.QINGCLOUD || c.basicInfo.Type == common.QINGCLOUD_PRIVATE) && c.cfg.QingCloudConfig.DailyTriggerTime != "" {
-		log.Infof("qing and qing private daily trigger time is (%s), sync timer is default (%d)s", c.cfg.QingCloudConfig.DailyTriggerTime, cloudcommon.CLOUD_SYNC_TIMER_DEFAULT, logger.NewORGPrefix(c.orgID))
+	if !c.triggerTime.IsZero() {
+		log.Infof("cloud (%s) daily trigger time is (%s), sync timer is default (%d)s", c.basicInfo.Name, c.triggerTime.Format("15:04"), cloudcommon.CLOUD_SYNC_TIMER_DEFAULT, logger.NewORGPrefix(c.orgID))
 		return cloudcommon.CLOUD_SYNC_TIMER_DEFAULT
 	}
 	var domain metadbmodel.Domain
