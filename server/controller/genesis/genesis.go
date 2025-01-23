@@ -43,11 +43,11 @@ type Genesis struct {
 	Synchronizer *grpc.SynchronizerServer
 }
 
-func NewGenesis(ctx context.Context, config *config.ControllerConfig) *Genesis {
+func NewGenesis(ctx context.Context, isMaster bool, config *config.ControllerConfig) *Genesis {
 	syncQueue := queue.NewOverwriteQueue("genesis-sync-data", config.GenesisCfg.QueueLengths)
 	kubernetesQueue := queue.NewOverwriteQueue("genesis-k8s-data", config.GenesisCfg.QueueLengths)
 
-	genesisSync := sstore.NewGenesisSync(ctx, syncQueue, config)
+	genesisSync := sstore.NewGenesisSync(ctx, isMaster, syncQueue, config)
 	genesisSync.Start()
 
 	genesisK8S := kstore.NewGenesisKubernetes(ctx, kubernetesQueue, config)

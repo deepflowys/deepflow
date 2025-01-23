@@ -85,7 +85,7 @@ func TestKubernetes(t *testing.T) {
 		})
 		defer k8sInfoPatch.Reset()
 
-		g := genesis.NewGenesis(context.Background(), &config.ControllerConfig{})
+		g := genesis.NewGenesis(context.Background(), true, &config.ControllerConfig{})
 		vJsonData, _ := os.ReadFile("./testfiles/vinterfaces.json")
 		var vData gcommon.GenesisSyncDataResponse
 		json.Unmarshal(vJsonData, &vData)
