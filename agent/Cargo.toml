@@ -183,6 +183,10 @@ harness = false
 
 [profile.release]
 panic = 'abort'
+debug = "full"
+opt-level = 0
+strip = "none"
+split-debuginfo = "off"
 
 [profile.dev]
 panic = 'abort'
