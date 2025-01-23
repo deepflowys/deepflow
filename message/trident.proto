@@ -11,8 +11,6 @@ service Synchronizer {
     rpc AnalyzerSync(SyncRequest) returns (SyncResponse) {}
     rpc Upgrade(UpgradeRequest) returns (stream UpgradeResponse) {}
     rpc Query(NtpRequest) returns (NtpResponse) {}
-    rpc GenesisSync(GenesisSyncRequest) returns (GenesisSyncResponse) {}
-    rpc KubernetesAPISync(KubernetesAPISyncRequest) returns (KubernetesAPISyncResponse) {}
     rpc GetKubernetesClusterID(KubernetesClusterIDRequest) returns (KubernetesClusterIDResponse) {}
     rpc GPIDSync(GPIDSyncRequest) returns (GPIDSyncResponse) {}
     rpc ShareGPIDLocalData(ShareGPIDSyncRequests) returns (ShareGPIDSyncRequests) {}
@@ -663,113 +661,6 @@ message PluginResponse {
     optional uint64 total_len = 4;                  // 数据总长
     optional uint32 pkt_count = 5;                  // 包总个数
     optional uint32 update_time = 6 [default = 0];  // plugin update epoch
-}
-
-message GenesisPlatformData {
-    repeated Ip ips = 7;
-
-    optional bool platform_enabled = 10;
-    optional string raw_hostname = 11;
-    optional string raw_all_vm_xml = 12;
-    optional string raw_vm_states = 13;
-    optional string raw_ovs_interfaces = 14;
-    optional string raw_ovs_ports = 15;
-    optional string raw_brctl_show = 16;
-    optional string raw_vlan_config = 17;
-
-    repeated Lldp lldp_info = 20;
-
-    repeated string raw_ip_netns = 30;
-    repeated string raw_ip_addrs = 31;
-    repeated InterfaceInfo interfaces = 32;
-}
-
-message Ip {
-    optional uint32 last_seen = 2;
-    optional uint64 mac = 3;
-    optional bytes ip = 4;
-
-    optional string port_uuid = 9;
-}
-
-message Lldp {
-    optional string interface = 1;
-    optional string system_name = 2;
-    optional string management_address = 5;
-    optional string port_id = 10;
-    optional string port_description = 11;
-}
-
-message InterfaceInfo {
-    optional uint64 mac = 1;
-    // ip/masklen
-    repeated string ip = 2;
-    optional string name = 3;
-    optional string device_id = 4;
-
-    optional uint32 tap_index = 5;
-
-    optional string device_name = 6;
-
-    optional string netns = 7 [default = ""];
-    optional uint32 netns_id = 8 [default = 0];
-
-    optional string if_type = 9 [default = ""];
-}
-
-message Tag {
-    optional string key = 1;
-    optional string value = 2;
-}
-
-message ProcessInfo {
-    optional string name = 1;
-    optional uint64 pid = 2;
-    optional string process_name = 3;
-    optional string cmdline = 4;
-    optional string user = 5;
-    optional uint32 start_time = 6;
-    optional uint32 netns_id = 7 [default = 0];
-    optional string container_id = 8 [default = ""];
-    repeated Tag os_app_tags = 11;
-}
-
-message GenesisProcessData {
-    repeated ProcessInfo process_entries = 5;
-}
-
-message GenesisSyncRequest {
-    optional uint64 version = 1 [default = 0];
-
-    optional common.TridentType trident_type = 2;
-
-    optional string source_ip = 3;
-    optional uint32 vtap_id = 4;
-    optional string kubernetes_cluster_id = 5;  // 仅对容器类型的采集器有意义
-
-    optional string nat_ip = 6;
-    optional string team_id = 7;  // agent team identity
-
-    optional GenesisPlatformData platform_data = 9;
-    optional GenesisProcessData process_data = 10;
-}
-
-message GenesisSyncResponse {
-    optional uint64 version = 1 [default = 0];
-}
-
-message KubernetesAPISyncRequest {
-    optional string cluster_id = 1;
-    optional uint64 version = 2;
-    optional string error_msg = 3;
-    optional uint32 vtap_id = 4;
-    optional string source_ip = 5;
-    optional string team_id = 6;  // agent team identity
-    repeated common.KubernetesAPIInfo entries = 10;
-}
-
-message KubernetesAPISyncResponse {
-    optional uint64 version = 1;
 }
 
 message KubernetesClusterIDRequest {

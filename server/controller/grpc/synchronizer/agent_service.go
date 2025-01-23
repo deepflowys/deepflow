@@ -104,7 +104,7 @@ func (s *AgentService) GenesisSync(ctx context.Context, in *api.GenesisSyncReque
 		statsd.AddGrpcCostStatsd(statsd.GenesisSync, int(time.Now().Sub(startTime).Milliseconds()))
 	}()
 
-	return genesis.GenesisService.Synchronizer.AgentGenesisSync(ctx, in)
+	return genesis.GenesisService.Synchronizer.GenesisSync(ctx, in)
 }
 
 func (s *AgentService) KubernetesAPISync(ctx context.Context, in *api.KubernetesAPISyncRequest) (*api.KubernetesAPISyncResponse, error) {
@@ -112,7 +112,7 @@ func (s *AgentService) KubernetesAPISync(ctx context.Context, in *api.Kubernetes
 	defer func() {
 		statsd.AddGrpcCostStatsd(statsd.KubernetesAPISync, int(time.Now().Sub(startTime).Milliseconds()))
 	}()
-	return genesis.GenesisService.Synchronizer.AgentKubernetesAPISync(ctx, in)
+	return genesis.GenesisService.Synchronizer.KubernetesAPISync(ctx, in)
 }
 
 func (s *AgentService) GPIDSync(ctx context.Context, in *api.GPIDSyncRequest) (*api.GPIDSyncResponse, error) {

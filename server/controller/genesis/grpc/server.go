@@ -23,12 +23,8 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/grpc/peer"
-
 	"github.com/deepflowio/deepflow/message/agent"
-	tridentcommon "github.com/deepflowio/deepflow/message/common"
 	"github.com/deepflowio/deepflow/message/controller"
-	"github.com/deepflowio/deepflow/message/trident"
 	controllercommon "github.com/deepflowio/deepflow/server/controller/common"
 	metadbcommon "github.com/deepflowio/deepflow/server/controller/db/metadb/common"
 	"github.com/deepflowio/deepflow/server/controller/genesis/common"
@@ -37,38 +33,26 @@ import (
 	sstore "github.com/deepflowio/deepflow/server/controller/genesis/store/sync"
 	"github.com/deepflowio/deepflow/server/libs/logger"
 	"github.com/deepflowio/deepflow/server/libs/queue"
+	"google.golang.org/grpc/peer"
 )
 
 var log = logger.MustGetLogger("genesis.grpc")
 
-func isInterestedHost(tType tridentcommon.TridentType) bool {
-	types := []tridentcommon.TridentType{tridentcommon.TridentType_TT_PROCESS, tridentcommon.TridentType_TT_HOST_POD, tridentcommon.TridentType_TT_VM_POD, tridentcommon.TridentType_TT_PHYSICAL_MACHINE, tridentcommon.TridentType_TT_PUBLIC_CLOUD, tridentcommon.TridentType_TT_K8S_SIDECAR}
-	for _, t := range types {
-		if t == tType {
-			return true
-		}
-	}
-	return false
-}
-
-type TridentStats struct {
-	OrgID                                int
-	TeamID                               int
-	VtapID                               uint32
-	TeamShortLcuuid                      string
-	IP                                   string
-	Proxy                                string
-	K8sVersion                           uint64
-	SyncVersion                          uint64
-	K8sLastSeen                          time.Time
-	SyncLastSeen                         time.Time
-	K8sClusterID                         string
-	SyncAgentType                        agent.AgentType
-	SyncTridentType                      tridentcommon.TridentType
-	GenesisSyncDataOperation             *trident.GenesisPlatformData
-	GenesisSyncProcessDataOperation      *trident.GenesisProcessData
-	AgentGenesisSyncDataOperation        *agent.GenesisPlatformData
-	AgentGenesisSyncProcessDataOperation *agent.GenesisProcessData
+type AgentStats struct {
+	OrgID                    int
+	TeamID                   int
+	VtapID                   uint32
+	TeamShortLcuuid          string
+	IP                       string
+	Proxy                    string
+	K8sVersion               uint64
+	SyncVersion              uint64
+	K8sLastSeen              time.Time
+	SyncLastSeen             time.Time
+	K8sClusterID             string
+	SyncAgentType            agent.AgentType
+	SyncDataOperation        *agent.GenesisPlatformData
+	SyncProcessDataOperation *agent.GenesisProcessData
 }
 
 type SynchronizerServer struct {
@@ -80,7 +64,7 @@ type SynchronizerServer struct {
 	vtapToVersion         sync.Map
 	vtapToLastSeen        sync.Map
 	clusterIDToLastSeen   sync.Map
-	tridentStatsMap       sync.Map
+	agentStatsMap         sync.Map
 	gsync                 *sstore.GenesisSync
 	gkubernetes           *kstore.GenesisKubernetes
 }
@@ -97,20 +81,20 @@ func NewGenesisSynchronizerServer(cfg config.GenesisConfig, genesisSyncQueue, k8
 		vtapToLastSeen:      sync.Map{},
 		clusterIDToVersion:  sync.Map{},
 		clusterIDToLastSeen: sync.Map{},
-		tridentStatsMap:     sync.Map{},
+		agentStatsMap:       sync.Map{},
 	}
 }
 
-func (g *SynchronizerServer) GetAgentStats(orgID, vtapID string) (TridentStats, error) {
+func (g *SynchronizerServer) GetAgentStats(orgID, vtapID string) (AgentStats, error) {
 	vtap := fmt.Sprintf("%s-%s", orgID, vtapID)
-	stats, ok := g.tridentStatsMap.Load(vtap)
+	stats, ok := g.agentStatsMap.Load(vtap)
 	if !ok {
-		return TridentStats{}, errors.New(fmt.Sprintf("not found org id (%s) vtap id (%s) stats", orgID, vtapID))
+		return AgentStats{}, errors.New(fmt.Sprintf("not found org id (%s) vtap id (%s) stats", orgID, vtapID))
 	}
-	return stats.(TridentStats), nil
+	return stats.(AgentStats), nil
 }
 
-func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *trident.GenesisSyncRequest) (*trident.GenesisSyncResponse, error) {
+func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *agent.GenesisSyncRequest) (*agent.GenesisSyncResponse, error) {
 	k8sClusterID := request.GetKubernetesClusterId()
 	remote := ""
 	peerIP, _ := peer.FromContext(ctx)
@@ -123,14 +107,14 @@ func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *trident.G
 	version := request.GetVersion()
 	if version == 0 {
 		log.Warningf("genesis sync ignore message with version 0 from %s", remote)
-		return &trident.GenesisSyncResponse{}, nil
+		return &agent.GenesisSyncResponse{}, nil
 	}
 
-	vtapID := request.GetVtapId()
-	tType := request.GetTridentType()
-	if !isInterestedHost(tType) {
-		log.Debugf("genesis sync ignore message from %s trident %s vtap_id %v", tType, remote, vtapID)
-		return &trident.GenesisSyncResponse{Version: &version}, nil
+	vtapID := request.GetAgentId()
+	tType := request.GetAgentType()
+	if !common.IsAgentInterestedHost(tType) {
+		log.Debugf("genesis sync ignore message from %s agent %s vtap_id %v", tType, remote, vtapID)
+		return &agent.GenesisSyncResponse{Version: &version}, nil
 	}
 
 	var orgID, teamID int
@@ -147,12 +131,12 @@ func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *trident.G
 			teamShortLcuuidToInfo, err := common.GetTeamShortLcuuidToInfo()
 			if err != nil {
 				log.Errorf("genesis sync from %s team_id %s vtap get team info failed: %s", remote, teamShortLcuuid, err.Error())
-				return &trident.GenesisSyncResponse{Version: &version}, nil
+				return &agent.GenesisSyncResponse{Version: &version}, nil
 			}
 			teamInfo, ok := teamShortLcuuidToInfo[teamShortLcuuid]
 			if !ok {
 				log.Errorf("genesis sync from %s team_id %s not found team info", remote, teamShortLcuuid)
-				return &trident.GenesisSyncResponse{Version: &version}, nil
+				return &agent.GenesisSyncResponse{Version: &version}, nil
 			}
 			orgID = teamInfo.OrgID
 			teamID = teamInfo.TeamId
@@ -200,7 +184,7 @@ func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *trident.G
 				Message:     request,
 			},
 		)
-		return &trident.GenesisSyncResponse{Version: &localVersion}, nil
+		return &agent.GenesisSyncResponse{Version: &localVersion}, nil
 	}
 
 	log.Infof("genesis sync received version %v -> %v from ip %s vtap_id %v", localVersion, version, remote, vtapID, logger.NewORGPrefix(orgID))
@@ -217,9 +201,9 @@ func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *trident.G
 	)
 
 	if vtapID != 0 {
-		var stats TridentStats
-		if s, ok := g.tridentStatsMap.Load(vtap); ok {
-			stats = s.(TridentStats)
+		var stats AgentStats
+		if s, ok := g.agentStatsMap.Load(vtap); ok {
+			stats = s.(AgentStats)
 		}
 		if sourceIP != "" {
 			stats.Proxy = peerIP.Addr.String()
@@ -229,19 +213,19 @@ func (g *SynchronizerServer) GenesisSync(ctx context.Context, request *trident.G
 		stats.TeamID = teamID
 		stats.VtapID = vtapID
 		stats.SyncVersion = version
-		stats.SyncTridentType = tType
+		stats.SyncAgentType = tType
 		stats.SyncLastSeen = time.Now()
 		stats.K8sClusterID = k8sClusterID
 		stats.TeamShortLcuuid = teamShortLcuuid
-		stats.GenesisSyncProcessDataOperation = request.GetProcessData()
-		stats.GenesisSyncDataOperation = platformData
-		g.tridentStatsMap.Store(vtap, stats)
+		stats.SyncProcessDataOperation = request.GetProcessData()
+		stats.SyncDataOperation = platformData
+		g.agentStatsMap.Store(vtap, stats)
 		g.vtapToVersion.Store(vtap, version)
 	}
-	return &trident.GenesisSyncResponse{Version: &version}, nil
+	return &agent.GenesisSyncResponse{Version: &version}, nil
 }
 
-func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *trident.KubernetesAPISyncRequest) (*trident.KubernetesAPISyncResponse, error) {
+func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *agent.KubernetesAPISyncRequest) (*agent.KubernetesAPISyncResponse, error) {
 	remote := ""
 	peerIP, _ := peer.FromContext(ctx)
 	sourceIP := request.GetSourceIp()
@@ -250,19 +234,19 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 	} else {
 		remote = peerIP.Addr.String()
 	}
-	vtapID := request.GetVtapId()
+	vtapID := request.GetAgentId()
 	if vtapID == 0 {
 		log.Warningf("kubernetes api sync received message with vtap_id 0 from %s", remote)
 	}
 	version := request.GetVersion()
 	if version == 0 {
 		log.Warningf("kubernetes api sync ignore message with version 0 from ip: %s, vtap id: %d", remote, vtapID)
-		return &trident.KubernetesAPISyncResponse{}, nil
+		return &agent.KubernetesAPISyncResponse{}, nil
 	}
 	clusterID := request.GetClusterId()
 	if clusterID == "" {
 		log.Warningf("kubernetes api sync ignore message with cluster id null from ip: %s, vtap id: %v", remote, vtapID)
-		return &trident.KubernetesAPISyncResponse{}, nil
+		return &agent.KubernetesAPISyncResponse{}, nil
 	}
 	entries := request.GetEntries()
 
@@ -280,12 +264,12 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 			teamShortLcuuidToInfo, err := common.GetTeamShortLcuuidToInfo()
 			if err != nil {
 				log.Errorf("kubernetes api sync from %s team_id %s vtap get team info failed: %s", remote, teamShortLcuuid, err.Error())
-				return &trident.KubernetesAPISyncResponse{}, nil
+				return &agent.KubernetesAPISyncResponse{}, nil
 			}
 			teamInfo, ok := teamShortLcuuidToInfo[teamShortLcuuid]
 			if !ok {
 				log.Errorf("kubernetes api sync %s team_id %s not found team info", remote, teamShortLcuuid)
-				return &trident.KubernetesAPISyncResponse{}, nil
+				return &agent.KubernetesAPISyncResponse{}, nil
 			}
 			orgID = teamInfo.OrgID
 			teamID = teamInfo.TeamId
@@ -296,9 +280,9 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 	}
 	vtap := fmt.Sprintf("%d-%d", orgID, vtapID)
 
-	var stats TridentStats
-	if s, ok := g.tridentStatsMap.Load(vtap); ok {
-		stats = s.(TridentStats)
+	var stats AgentStats
+	if s, ok := g.agentStatsMap.Load(vtap); ok {
+		stats = s.(AgentStats)
 	}
 	if sourceIP != "" {
 		stats.Proxy = peerIP.Addr.String()
@@ -311,7 +295,7 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 	stats.K8sLastSeen = time.Now()
 	stats.K8sVersion = version
 	stats.TeamShortLcuuid = teamShortLcuuid
-	g.tridentStatsMap.Store(vtap, stats)
+	g.agentStatsMap.Store(vtap, stats)
 	now := time.Now()
 	if vtapID != 0 {
 		if lastTime, ok := g.clusterIDToLastSeen.Load(clusterID); ok {
@@ -326,9 +310,9 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 		}
 		log.Infof("kubernetes api sync received version %v -> %v from ip %s vtap_id %v len %v", localVersion, version, remote, vtapID, len(entries), logger.NewORGPrefix(orgID))
 
-		// 如果version有更新，但消息中没有任何kubernetes数据，触发trident重新上报数据
+		// 如果version有更新，但消息中没有任何kubernetes数据，触发vtap重新上报数据
 		if localVersion != version && len(entries) == 0 {
-			return &trident.KubernetesAPISyncResponse{Version: &localVersion}, nil
+			return &agent.KubernetesAPISyncResponse{Version: &localVersion}, nil
 		}
 
 		// 正常推送消息到队列中
@@ -343,7 +327,7 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 		// 更新内存中的last_seen和version
 		g.clusterIDToLastSeen.Store(clusterID, now)
 		g.clusterIDToVersion.Store(clusterID, version)
-		return &trident.KubernetesAPISyncResponse{Version: &version}, nil
+		return &agent.KubernetesAPISyncResponse{Version: &version}, nil
 	} else {
 		log.Infof("kubernetes api sync received version %v from ip %s no vtap_id", version, remote, logger.NewORGPrefix(orgID))
 		//正常上报数据，才推送消息到队列中
@@ -356,8 +340,8 @@ func (g *SynchronizerServer) KubernetesAPISync(ctx context.Context, request *tri
 				Message:     request,
 			})
 		}
-		// 采集器未自动发现时，触发trident上报完整数据
-		return &trident.KubernetesAPISyncResponse{}, nil
+		// 采集器未自动发现时，触发agent上报完整数据
+		return &agent.KubernetesAPISyncResponse{}, nil
 	}
 }
 

@@ -21,7 +21,6 @@ import (
 
 	"github.com/deepflowio/deepflow/message/agent"
 	"github.com/deepflowio/deepflow/message/common"
-	"github.com/deepflowio/deepflow/message/trident"
 	"github.com/deepflowio/deepflow/server/controller/model"
 )
 
@@ -65,12 +64,11 @@ type KubernetesInfo struct {
 }
 
 type K8SRPCMessage struct {
-	ORGID        int
-	MessageType  int
-	VtapID       uint32
-	Peer         string
-	Message      *trident.KubernetesAPISyncRequest
-	AgentMessage *agent.KubernetesAPISyncRequest
+	ORGID       int
+	MessageType int
+	VtapID      uint32
+	Peer        string
+	Message     *agent.KubernetesAPISyncRequest
 }
 
 type VIFRPCMessage struct {
@@ -80,6 +78,5 @@ type VIFRPCMessage struct {
 	VtapID       uint32
 	Peer         string
 	K8SClusterID string
-	Message      *trident.GenesisSyncRequest
-	AgentMessage *agent.GenesisSyncRequest
+	Message      *agent.GenesisSyncRequest
 }
