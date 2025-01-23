@@ -135,6 +135,10 @@ func (d *domain) shouldRefresh(cloudData cloudmodel.Resource) error {
 func (d *domain) refresh(cloudData cloudmodel.Resource) {
 	log.Info("domain refresh started", d.metadata.LogPrefixes)
 
+	// TODO refactor
+	// for process
+	d.cache.RefreshVTaps()
+
 	// 指定创建及更新操作的资源顺序
 	// 基本原则：无依赖资源优先；实时性需求高资源优先
 	listener := listener.NewWholeDomain(d.metadata.Domain.Lcuuid, d.cache, d.eventQueue)

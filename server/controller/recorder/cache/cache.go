@@ -1471,3 +1471,13 @@ func (c *Cache) refreshVIP() {
 
 	c.AddVIPs(vips)
 }
+
+// RefreshVTaps refreshes vtap data for every regular domain synchronization
+func (c *Cache) RefreshVTaps() {
+	var vtaps []*metadbmodel.VTap
+	if err := c.metadata.DB.Find(&vtaps).Error; err != nil {
+		log.Error(dbQueryResourceFailed(ctrlrcommon.RESOURCE_TYPE_VTAP_EN, err))
+		return
+	}
+	c.ToolDataSet.RefreshVTaps(vtaps)
+}

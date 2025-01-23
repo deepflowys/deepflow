@@ -156,6 +156,10 @@ func (s *subDomain) tryRefresh(cloudData cloudmodel.SubDomainResource) error {
 func (s *subDomain) refresh(cloudData cloudmodel.SubDomainResource) {
 	log.Info("sub_domain sync refresh started", s.metadata.LogPrefixes)
 
+	// TODO refactor
+	// for process
+	s.cache.RefreshVTaps()
+
 	listener := listener.NewWholeSubDomain(s.metadata.Domain.Lcuuid, s.metadata.SubDomain.Lcuuid, s.cache, s.eventQueue)
 	subDomainUpdatersInUpdateOrder := s.getUpdatersInOrder(cloudData)
 	s.executeUpdaters(subDomainUpdatersInUpdateOrder)

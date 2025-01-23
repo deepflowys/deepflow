@@ -95,9 +95,12 @@ func (p *Process) generateDBItemToAdd(cloudItem *cloudmodel.Process) (*metadbmod
 	var vmID int
 	if deviceType == common.VIF_DEVICE_TYPE_POD ||
 		deviceType == common.VIF_DEVICE_TYPE_POD_NODE {
-		id, ok := p.cache.ToolDataSet.GetVMIDByPodNodeID(podNodeID)
-		if ok {
-			vmID = id
+		if podNodeID != 0 {
+			id, ok := p.cache.ToolDataSet.GetVMIDByPodNodeID(podNodeID)
+			if ok {
+				vmID = id
+			}
+
 		}
 	} else {
 		vmID = deviceID
