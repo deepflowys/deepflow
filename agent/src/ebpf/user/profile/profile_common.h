@@ -47,6 +47,9 @@ struct profiler_context {
 	stack_map_t custom_stack_map_a;
 	stack_map_t custom_stack_map_b;
 
+	// The name of the stack blacklist map
+	char stack_blacklist_map_name[MAP_NAME_SZ];
+
 	// Read raw data from the eBPF perfbuf and temporarily store it.
 	struct stack_trace_key_t *raw_stack_data;
 
@@ -143,6 +146,7 @@ int profiler_context_init(struct profiler_context *ctx, const char *name,
 			  const char *stack_map_name_b,
 			  const char *custom_stack_map_name_a,
 			  const char *custom_stack_map_name_b,
+			  const char *stack_blacklist_map_name,
 			  bool only_matched, bool use_delta_time,
 			  u64 sample_period, void *callback_ctx);
 bool run_conditions_check(void);

@@ -47,6 +47,7 @@ char *resolve_and_gen_stack_trace_str(struct bpf_tracer *t,
 				      struct stack_trace_key_t *v,
 				      const char *stack_map_name,
 				      const char *custom_stack_map_name,
+				      const char *stack_blacklist_map_name,
 				      stack_str_hash_t *h,
 				      bool new_cache,
 				      char *process_name, void *info_p, bool ignore_libs);

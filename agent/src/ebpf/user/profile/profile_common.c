@@ -104,6 +104,7 @@ int profiler_context_init(struct profiler_context *ctx,
 			  const char *stack_map_name_b,
 			  const char *custom_stack_map_name_a,
 			  const char *custom_stack_map_name_b,
+			  const char *stack_blacklist_map_name,
 			  bool only_matched,
 			  bool use_delta_time, u64 sample_period,
 			  void *callback_ctx)
@@ -130,6 +131,9 @@ int profiler_context_init(struct profiler_context *ctx,
 	memset(&ctx->custom_stack_map_b, 0, sizeof(stack_map_t));
 	snprintf(ctx->custom_stack_map_b.name, sizeof(ctx->custom_stack_map_b.name), "%s",
 		 custom_stack_map_name_b);
+
+	snprintf(ctx->stack_blacklist_map_name, sizeof(ctx->stack_blacklist_map_name), "%s",
+		 stack_blacklist_map_name);
 
 	ctx->only_matched_data = only_matched;
 	ctx->use_delta_time = use_delta_time;
@@ -1025,6 +1029,7 @@ static void aggregate_stack_traces(struct profiler_context *ctx,
 		char *trace_str =
 		    resolve_and_gen_stack_trace_str(t, v,
 		                    stack_map->name, custom_stack_map->name,
+						    ctx->stack_blacklist_map_name,
 						    stack_str_hash, matched,
 						    process_name, info_p,
 						    ctx->type ==

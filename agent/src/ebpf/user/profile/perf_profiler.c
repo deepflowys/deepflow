@@ -753,7 +753,7 @@ int start_continuous_profiler(int freq, int java_syms_update_delay,
 			      PROFILER_TYPE_ONCPU, g_enable_oncpu,
 			      MAP_PROFILER_STATE_NAME, MAP_STACK_A_NAME,
 			      MAP_STACK_B_NAME, MAP_CUSTOM_STACK_A_NAME,
-			      MAP_CUSTOM_STACK_B_NAME, false, true,
+			      MAP_CUSTOM_STACK_B_NAME, "", false, true,
 			      NANOSEC_PER_SEC / freq,
 			      cb_ctx[PROFILER_CTX_ONCPU_IDX]);
 	g_ctx_array[PROFILER_CTX_ONCPU_IDX] = &oncpu_ctx;

@@ -473,6 +473,7 @@ static int get_stack_ips(struct bpf_tracer *t,
 
 static char *build_stack_trace_string(struct bpf_tracer *t,
 				      const char *stack_map_name,
+					  const char *stack_blacklist_map_name,
 				      pid_t pid,
 				      int stack_id,
 				      stack_str_hash_t * h,
@@ -531,6 +532,7 @@ static char *build_stack_trace_string(struct bpf_tracer *t,
 		return NULL;
 
 	int start_idx = -1, folded_size = 0;
+	bool is_blacklisted = false;
 	for (i = PERF_MAX_STACK_DEPTH - 1; i >= 0; i--) {
 		if (ips[i] == 0 || ips[i] == sentinel_addr)
 			continue;
@@ -544,6 +546,9 @@ static char *build_stack_trace_string(struct bpf_tracer *t,
 			str = resolve_addr(t, pid, (i == start_idx), ips[i], new_cache, info_p);
 		}
 		if (str) {
+			if (strstr(str, "memory_profile")) {
+				is_blacklisted = true;
+			}
 			// ignore frames in library for memory profiling
 			if (ignore_libs && strlen(str) >= strlen(lib_sym_prefix)
 			    && strncmp(str, lib_sym_prefix,
@@ -554,6 +559,13 @@ static char *build_stack_trace_string(struct bpf_tracer *t,
 			symbol_array[i] = pointer_to_uword(str);
 			folded_size += strlen(str);
 		}
+	}
+
+	if (is_blacklisted) {
+		u64 blacklist_key = stack_id | ((u64)pid << 32);
+		char one = 1;
+		bpf_table_set_value(t, stack_blacklist_map_name, blacklist_key, (void *)&one);
+		goto failed;
 	}
 
 	/* Ensure that there is sufficient memory for the ';' following it. */
@@ -596,6 +608,7 @@ static char *folded_stack_trace_string(struct bpf_tracer *t,
 				       int stack_id,
 				       pid_t pid,
 				       const char *stack_map_name,
+					   const char *stack_blacklist_map_name,
 				       stack_str_hash_t * h,
 				       bool new_cache, void *info_p, u64 ts,
 				       bool ignore_libs, bool use_symbol_table)
@@ -616,9 +629,9 @@ static char *folded_stack_trace_string(struct bpf_tracer *t,
 
 	char *str = NULL;
 	int ret_val = 0;
-	str = build_stack_trace_string(t, stack_map_name, pid, stack_id,
-				       h, new_cache, &ret_val, info_p, ts,
-				       ignore_libs, use_symbol_table);
+	str = build_stack_trace_string(t, stack_map_name, stack_blacklist_map_name,
+					   pid, stack_id, h, new_cache, &ret_val, info_p,
+					   ts, ignore_libs, use_symbol_table);
 
 	if (ret_val == ETR_NOTEXIST)
 		return NULL;
@@ -666,6 +679,7 @@ char *resolve_and_gen_stack_trace_str(struct bpf_tracer *t,
 				      struct stack_trace_key_t *v,
 				      const char *stack_map_name,
 				      const char *custom_stack_map_name,
+				      const char *stack_blacklist_map_name,
 				      stack_str_hash_t * h,
 				      bool new_cache,
 				      char *process_name, void *info_p,
@@ -724,6 +738,7 @@ char *resolve_and_gen_stack_trace_str(struct bpf_tracer *t,
 	if (v->kernstack >= 0) {
 		k_trace_str = folded_stack_trace_string(t, v->kernstack,
 							0, stack_map_name,
+							"",
 							h, new_cache, info_p,
 							v->timestamp,
 							ignore_libs, false);
@@ -738,8 +753,9 @@ char *resolve_and_gen_stack_trace_str(struct bpf_tracer *t,
 							v->flags &
 							STACK_TRACE_FLAGS_DWARF
 							? custom_stack_map_name
-							: stack_map_name, h,
-							new_cache, info_p,
+							: stack_map_name,
+							stack_blacklist_map_name,
+							h, new_cache, info_p,
 							v->timestamp,
 							ignore_libs, false);
 		if (u_trace_str == NULL)
@@ -759,7 +775,7 @@ char *resolve_and_gen_stack_trace_str(struct bpf_tracer *t,
 
 	bool has_intpstack = v->intpstack > 0;
 	if (has_intpstack) {
-		i_trace_str = folded_stack_trace_string(t, v->intpstack, v->tgid, custom_stack_map_name, h, new_cache, info_p, v->timestamp, ignore_libs, true);
+		i_trace_str = folded_stack_trace_string(t, v->intpstack, v->tgid, custom_stack_map_name, "", h, new_cache, info_p, v->timestamp, ignore_libs, true);
 		if (i_trace_str != NULL) {
 			len += strlen(i_trace_str) + strlen(INCOMPLETE_PYTHON_STACK) + 2;
 		} else {

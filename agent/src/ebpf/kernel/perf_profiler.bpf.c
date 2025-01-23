@@ -73,6 +73,8 @@ MAP_PROG_ARRAY(cp_progs_jmp_pe_map, __u32, __u32, CP_PROG_PE_NUM, FEATURE_FLAG_P
 MAP_STACK_TRACE(stack_map_a, STACK_MAP_ENTRIES, FEATURE_FLAG_PROFILE_ONCPU)
 MAP_STACK_TRACE(stack_map_b, STACK_MAP_ENTRIES, FEATURE_FLAG_PROFILE_ONCPU)
 
+MAP_HASH(stack_blacklist_map, __u64, __u8, 1, FEATURE_FLAG_PROFILE_ONCPU)
+
 typedef struct {
 	struct bpf_map_def *state;
 	struct bpf_map_def *stack_map_a;
@@ -82,6 +84,7 @@ typedef struct {
 	struct bpf_map_def *profiler_output_a;
 	struct bpf_map_def *profiler_output_b;
 	struct bpf_map_def *progs_jmp;
+	struct bpf_map_def *stack_blacklist_map;
 } map_group_t;
 
 #ifdef LINUX_VER_5_2_PLUS
@@ -496,8 +499,17 @@ int collect_stack_and_send_output(struct pt_regs *ctx,
 		__sync_fetch_and_add(drop_count_ptr, 1);
 	}
 
-	if (user_only && key->userstack < 0) {
-		return 0;
+	// although this key is only used in the if clause
+	// putting it inside will cause llc to crash
+	__u64 stack_key = key->userstack | ((__u64)key->tgid << 32);
+	if (user_only) {
+		if (key->userstack < 0) {
+			return 0;
+		}
+		__u8 *black = bpf_map_lookup_elem(maps->stack_blacklist_map, &stack_key);
+		if (black != NULL && *black > 0) {
+			return 0;
+		}
 	}
 
 	if (key->userstack < 0 && key->kernstack < 0) {
@@ -545,6 +557,7 @@ static map_group_t oncpu_maps = {.state = &NAME(profiler_state_map),
 	.profiler_output_a = &NAME(profiler_output_a),
 	.profiler_output_b = &NAME(profiler_output_b),
 	.progs_jmp = &NAME(cp_progs_jmp_pe_map),
+	.stack_blacklist_map = &NAME(stack_blacklist_map),
 };
 
 PERF_EVENT_PROG(oncpu_profile) (struct bpf_perf_event_data * ctx) {
