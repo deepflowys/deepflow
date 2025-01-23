@@ -36,6 +36,7 @@ type ExtMetrics struct {
 	UniversalTag flow_metrics.UniversalTag
 
 	VTableName string
+	Host       string
 
 	AgentID uint16
 
@@ -107,6 +108,7 @@ func (m *ExtMetrics) Columns() []*ckdb.Column {
 		ckdb.NewColumn("tag_values", ckdb.ArrayLowCardinalityString).SetComment("额外的tag对应的值"),
 		ckdb.NewColumn("metrics_float_names", ckdb.ArrayLowCardinalityString).SetComment("额外的float类型metrics"),
 		ckdb.NewColumn("metrics_float_values", ckdb.ArrayFloat64).SetComment("额外的float metrics值"),
+		ckdb.NewColumn("host", ckdb.LowCardinalityString),
 	)
 
 	return columns

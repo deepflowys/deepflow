@@ -106,6 +106,7 @@ const (
 	COLUMN_GPROCESS_ID                = "gprocess_id"
 	COLUMN_GPROCESS_ID_0              = "gprocess_id_0"
 	COLUMN_GPROCESS_ID_1              = "gprocess_id_1"
+	COLUMN_HOST                       = "host"
 	COLUMN_HOST_ID                    = "host_id"
 	COLUMN_HOST_ID_0                  = "host_id_0"
 	COLUMN_HOST_ID_1                  = "host_id_1"

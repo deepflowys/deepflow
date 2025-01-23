@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/rest"
 
 	libs "github.com/deepflowio/deepflow/server/libs/kubernetes"
+	"github.com/deepflowio/deepflow/server/libs/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -170,15 +171,6 @@ func (w *Watcher) Run() {
 	}
 }
 
-func indexOf(ss []string, s string) int {
-	for i, v := range ss {
-		if v == s {
-			return i
-		}
-	}
-	return -1
-}
-
 func (w *Watcher) getMyClickhouseEndpointsExternal() ([]Endpoint, error) {
 	podNames, err := w.getPodNames()
 	if err != nil {
@@ -197,7 +189,7 @@ func (w *Watcher) getMyClickhouseEndpointsExternal() ([]Endpoint, error) {
 // 2. Input the list of all clickhouse endpoints, and sort by IP
 // 3, my corresponding 'clickhouse endpoint' is on position 'index%len'  in the 'clickhouse endpoints list'
 func getMyClickhouseEndpoints(podNames []string, myName string, endpoints []Endpoint) ([]Endpoint, error) {
-	myIndex := indexOf(podNames, myName)
+	myIndex := utils.IndexOf(podNames, myName)
 	if myIndex < 0 {
 		return nil, fmt.Errorf("can't find my pod name(%s) in pods(%v)", myName, podNames)
 	}
