@@ -58,6 +58,7 @@ func getController(c *gin.Context) {
 	args["lcuuid"] = c.Param("lcuuid")
 	orgID, _ := c.Get(common.HEADER_KEY_X_ORG_ID)
 	data, err := service.GetControllers(orgID.(int), args)
+	log.Errorf("%+v", data)
 	if err != nil {
 		err = fmt.Errorf("org id(%v), %s", orgID, err.Error())
 	}
@@ -90,6 +91,7 @@ func getControllers(c *gin.Context) {
 
 	orgID, _ := c.Get(common.HEADER_KEY_X_ORG_ID)
 	data, err := service.GetControllers(orgID.(int), args)
+	log.Errorf("%+v", data)
 	if err != nil {
 		err = fmt.Errorf("org id(%d), %s", orgID.(int), err.Error())
 	}
