@@ -43,6 +43,7 @@ type ProfileTreeNode struct {
 	ParentNodeID int
 	SelfValue    int
 	TotalValue   int
+	Depth        int
 }
 
 type Debug struct {

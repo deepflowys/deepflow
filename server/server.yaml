@@ -394,6 +394,11 @@ querier:
   # profile相关配置
   profile:
     flame_query_limit: 1000000
+    result-filter:
+      disabled: false
+      # nodes that exceed the `depth` layer and have a total-value ratio less than `total-value-percent` are not displayed.
+      total-value-percent: 0.1
+      depth: 12
   
   # trace-map 相关配置
   trace-map:
