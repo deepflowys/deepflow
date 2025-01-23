@@ -646,7 +646,7 @@ func (q *Query) GetAgentDispatcher(orgDB *metadb.DB, domainPrefix string, dataDu
 	db := "deepflow_tenant"
 	now := time.Now()
 	before := now.UTC().Add(time.Second * -1 * time.Duration(dataDuration))
-	sql := fmt.Sprintf("SELECT `tag.host`, Sum(`metrics.tx-bytes`) AS `tx-bps` FROM deepflow_agent_collect_sender"+
+	sql := fmt.Sprintf("SELECT `tag.host`, Sum(`metrics.tx_bytes`) AS `tx-bps` FROM deepflow_agent_collect_sender"+
 		" WHERE `time`>%d AND `time`<%d GROUP BY tag.host", before.Unix(), now.Unix())
 	values.Add("db", db)
 	values.Add("sql", sql)
