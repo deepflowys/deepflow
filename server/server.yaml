@@ -92,7 +92,10 @@ controller:
 
   # mysql相关配置
   mysql:
+    type: mysql
     database: deepflow
+    # only when use postgres
+    schema-name: public
     user-name: root
     user-password: deepflow
     host: mysql

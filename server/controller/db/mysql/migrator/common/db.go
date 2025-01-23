@@ -28,7 +28,7 @@ func GetSessionWithoutName(cfg config.MySqlConfig) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.InitSession(connector)
+	return common.InitSession(cfg, connector)
 }
 
 func GetSessionWithName(cfg config.MySqlConfig) (*gorm.DB, error) {
@@ -37,5 +37,5 @@ func GetSessionWithName(cfg config.MySqlConfig) (*gorm.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return common.InitSession(connector)
+	return common.InitSession(cfg, connector)
 }

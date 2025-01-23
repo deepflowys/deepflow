@@ -17,7 +17,9 @@
 package config
 
 type MySqlConfig struct {
+	Type                   string `default:"mysql" yaml:"type"`
 	Database               string `default:"deepflow" yaml:"database"`
+	SchemaName             string `default:"public" yaml:"schema-name"`
 	Host                   string `default:"mysql" yaml:"host"`
 	Port                   uint32 `default:"30130" yaml:"port"`
 	UserName               string `default:"root" yaml:"user-name"`
