@@ -21,6 +21,7 @@ pub(crate) mod http;
 pub(crate) mod mq;
 mod parser;
 pub mod pb_adapter;
+pub(crate) mod ping;
 pub(crate) mod plugin;
 pub(crate) mod rpc;
 pub(crate) mod sql;
@@ -34,6 +35,7 @@ pub use mq::{
 };
 use num_enum::TryFromPrimitive;
 pub use parser::{AppProto, MetaAppProto, PseudoAppProto, SessionAggregator};
+pub use ping::{PingInfo, PingLog};
 pub use rpc::{
     decode_new_rpc_trace_context_with_type, BrpcInfo, BrpcLog, DubboInfo, DubboLog, SofaRpcInfo,
     SofaRpcLog, TarsInfo, TarsLog, SOFA_NEW_RPC_TRACE_CTX_KEY,
@@ -89,6 +91,7 @@ pub enum L7ResponseStatus {
     NotExist = 2,
     ServerError = 3,
     ClientError = 4,
+    Timeout = 5,
 }
 
 impl Default for L7ResponseStatus {

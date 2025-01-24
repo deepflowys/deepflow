@@ -518,11 +518,22 @@ impl<'a> MetaPacket<'a> {
         }
     }
 
-    // 目前仅支持获取UDP或TCP的Payload
-    pub fn get_l4_payload(&self) -> Option<&[u8]> {
-        if self.lookup_key.proto != IpProtocol::TCP && self.lookup_key.proto != IpProtocol::UDP {
+    fn get_l3_payload(&self) -> Option<&[u8]> {
+        if self.tap_port.is_from(TapPort::FROM_EBPF) {
             return None;
         }
+
+        let packet_header_size = self.header_type.min_packet_size() + self.l2_l3_opt_size as usize;
+        if let Some(raw) = self.raw.as_ref() {
+            if raw.len() > packet_header_size {
+                return Some(&raw[packet_header_size..]);
+            }
+        }
+        None
+    }
+
+    // 目前仅支持获取UDP或TCP的Payload
+    fn get_l4_payload(&self) -> Option<&[u8]> {
         if self.tap_port.is_from(TapPort::FROM_EBPF) {
             return Some(&self.raw_from_ebpf[self.raw_from_ebpf_offset..]);
         }
@@ -534,6 +545,18 @@ impl<'a> MetaPacket<'a> {
             if raw.len() > packet_header_size {
                 return Some(&raw[packet_header_size..]);
             }
+        }
+        None
+    }
+
+    pub fn get_l7(&self) -> Option<&[u8]> {
+        if self.lookup_key.proto == IpProtocol::TCP || self.lookup_key.proto == IpProtocol::UDP {
+            return self.get_l4_payload();
+        }
+        if self.lookup_key.eth_type == EthernetType::IPV4
+            || self.lookup_key.eth_type == EthernetType::IPV6
+        {
+            return self.get_l3_payload();
         }
         None
     }
@@ -973,9 +996,18 @@ impl<'a> MetaPacket<'a> {
             return self.packet_len as usize - 54;
         }
 
-        let packet_header_size = self.header_type.min_packet_size()
-            + self.l2_l3_opt_size as usize
-            + self.l4_opt_size as usize;
+        let packet_header_size = if self.lookup_key.proto == IpProtocol::UDP && self.lookup_key.proto == IpProtocol::TCP {
+            self.header_type.min_packet_size()
+                + self.l2_l3_opt_size as usize
+                + self.l4_opt_size as usize
+        } else if self.lookup_key.eth_type == EthernetType::IPV4 {
+            HeaderType::Ipv4.min_packet_size() + self.l2_l3_opt_size as usize
+        } else if self.lookup_key.eth_type == EthernetType::IPV6 {
+            HeaderType::Ipv6.min_packet_size() + self.l2_l3_opt_size as usize
+        } else {
+            return 0;
+        };
+
         if let Some(raw) = self.raw.as_ref() {
             if raw.len() > packet_header_size {
                 return raw.len() - packet_header_size;

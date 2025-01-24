@@ -5077,6 +5077,82 @@ inputs:
   时需要 SYS_ADMIN 权限）。
 - adaptive: deepflow-agent 优先使用 active 模式获取其他 POD 的 MAC 和 IP 信息。
 
+### 从控制器拉取资源 {#inputs.resources.pull_resource_from_controller}
+
+DeepFlow-server 从控制器拉取资源的配置。
+DeepFlow-agent 不会读取此部分。
+
+#### 云平台过滤器 {#inputs.resources.pull_resource_from_controller.domain_filter}
+
+**标签**:
+
+`hot_update`
+
+**FQCN**:
+
+`inputs.resources.pull_resource_from_controller.domain_filter`
+
+Upgrade from old version: `domains`
+
+**默认值**:
+```yaml
+inputs:
+  resources:
+    pull_resource_from_controller:
+      domain_filter:
+      - '0'
+```
+
+**枚举可选值**:
+| Value | Note                         |
+| ----- | ---------------------------- |
+| _DYNAMIC_OPTIONS_ | _DYNAMIC_OPTIONS_ |
+
+**模式**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | string |
+
+**详细描述**:
+
+在运行过程中 deepflow-agent 周期性从 deepflow-server 获取 IP、MAC 列表，用于
+向采集的观测数据注入标签。该参数可以控制向 deepflow-agent 发送的 IP、MAC 数据范围，
+以减少下发的数据量。当业务系统中不存在跨云平台的服务访问时，可以配置仅向 deepflow-agent
+下发本云平台的数据。参数的默认值为`0`，表示获取所有云平台的数据；也可以设置 lcuuid 列表，
+仅获取部分云平台的数据。
+
+#### 仅下发本集群中的 K8s Pod IP {#inputs.resources.pull_resource_from_controller.only_kubernetes_pod_ip_in_local_cluster}
+
+**标签**:
+
+`hot_update`
+
+**FQCN**:
+
+`inputs.resources.pull_resource_from_controller.only_kubernetes_pod_ip_in_local_cluster`
+
+Upgrade from old version: `pod_cluster_internal_ip`
+
+**默认值**:
+```yaml
+inputs:
+  resources:
+    pull_resource_from_controller:
+      only_kubernetes_pod_ip_in_local_cluster: false
+```
+
+**模式**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | bool |
+
+**详细描述**:
+
+运行过程中 deepflow-agent 周期性从 deepflow-server 获取 IP、MAC 列表，用于
+向采集的观测数据注入标签。该参数可以控制向 deepflow-agent 发送的 IP、MAC 数据范围，
+减少下发的数据量。当 Kubernetes 内部的 POD IP 不会直接与外部通信时，可以配置仅向 deepflow-agent
+下发本集群的 POD IP、MAC 数据。参数默认值为`false`，表示发送全部。
+
 ## 集成 {#inputs.integration}
 
 ### Enabled {#inputs.integration.enabled}
@@ -6204,6 +6280,7 @@ processors:
         NATS: 1-65535
         OpenWire: 1-65535
         Oracle: 1521
+        Ping: 1-65535
         PostgreSQL: 1-65535
         Pulsar: 1-65535
         Redis: 1-65535
@@ -6276,6 +6353,7 @@ processors:
         NATS: []
         OpenWire: []
         Oracle: []
+        Ping: []
         PostgreSQL: []
         Pulsar: []
         Redis: []

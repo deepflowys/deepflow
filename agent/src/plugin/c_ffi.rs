@@ -278,6 +278,7 @@ impl TryFrom<ParseInfo> for CustomInfo {
                             L7ResponseStatus::NotExist => L7ResponseStatus::NotExist,
                             L7ResponseStatus::ServerError => L7ResponseStatus::ServerError,
                             L7ResponseStatus::ClientError => L7ResponseStatus::ClientError,
+                            L7ResponseStatus::Timeout => L7ResponseStatus::Timeout,
                         },
                         code: Some(resp.code),
                         exception: c_str_to_string(&resp.exception).unwrap_or_default(),
