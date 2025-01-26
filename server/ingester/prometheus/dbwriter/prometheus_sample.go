@@ -47,6 +47,7 @@ type PrometheusSampleInterface interface {
 
 	NewColumnBlock() ckdb.CKColumnBlock
 	AppendToColumnBlock(ckdb.CKColumnBlock)
+	NativeTagVersion() uint32
 }
 
 type PrometheusSample struct {
@@ -86,6 +87,10 @@ func (m *PrometheusSampleMini) VpcId() int32 {
 }
 
 func (m *PrometheusSampleMini) PodNsId() uint16 {
+	return 0
+}
+
+func (m *PrometheusSampleMini) NativeTagVersion() uint32 {
 	return 0
 }
 
@@ -224,6 +229,10 @@ func (m *PrometheusSample) DatabaseName() string {
 
 func (m *PrometheusSample) TableName() string {
 	return m.PrometheusSampleMini.DatabaseName()
+}
+
+func (m *PrometheusSample) NativeTagVersion() uint32 {
+	return 0
 }
 
 func (m *PrometheusSample) OrgID() uint16 {

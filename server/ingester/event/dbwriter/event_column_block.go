@@ -21,6 +21,7 @@ import (
 
 	"github.com/ClickHouse/ch-go/proto"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 )
 
 type EventBlock struct {
@@ -63,6 +64,8 @@ type EventBlock struct {
 	HasMetrics  bool
 	ColBytes    proto.ColUInt32
 	ColDuration proto.ColUInt64
+
+	*nativetag.NativeTagsBlock
 }
 
 func (b *EventBlock) Reset() {
@@ -103,6 +106,9 @@ func (b *EventBlock) Reset() {
 	b.ColAttributeValues.Reset()
 	b.ColBytes.Reset()
 	b.ColDuration.Reset()
+	if b.NativeTagsBlock != nil {
+		b.NativeTagsBlock.Reset()
+	}
 }
 
 func (b *EventBlock) ToInput(input proto.Input) proto.Input {
@@ -149,16 +155,25 @@ func (b *EventBlock) ToInput(input proto.Input) proto.Input {
 			proto.InputColumn{Name: ckdb.COLUMN_DURATION, Data: &b.ColDuration},
 		)
 	}
+	if b.NativeTagsBlock != nil {
+		input = b.NativeTagsBlock.ToInput(input)
+	}
 	return input
 }
 
 func (n *EventStore) NewColumnBlock() ckdb.CKColumnBlock {
-	return &EventBlock{
+	b := &EventBlock{
 		HasMetrics:         n.HasMetrics,
 		ColEventType:       new(proto.ColStr).LowCardinality(),
 		ColAttributeNames:  new(proto.ColStr).LowCardinality().Array(),
 		ColAttributeValues: new(proto.ColStr).Array(),
 	}
+	if n.HasMetrics {
+		b.NativeTagsBlock = nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.EVENT_PERF_EVENT)
+	} else {
+		b.NativeTagsBlock = nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.EVENT_EVENT)
+	}
+	return b
 }
 
 func (n *EventStore) AppendToColumnBlock(b ckdb.CKColumnBlock) {
@@ -200,4 +215,7 @@ func (n *EventStore) AppendToColumnBlock(b ckdb.CKColumnBlock) {
 	block.ColAttributeValues.Append(n.AttributeValues)
 	block.ColBytes.Append(n.Bytes)
 	block.ColDuration.Append(n.Duration)
+	if block.NativeTagsBlock != nil {
+		block.NativeTagsBlock.AppendToColumnBlock(n.AttributeNames, n.AttributeValues, nil, nil)
+	}
 }

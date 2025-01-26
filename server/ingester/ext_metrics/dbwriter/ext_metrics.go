@@ -22,6 +22,7 @@ import (
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
 	"github.com/deepflowio/deepflow/server/libs/datatype"
 	flow_metrics "github.com/deepflowio/deepflow/server/libs/flow-metrics"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 	"github.com/deepflowio/deepflow/server/libs/pool"
 )
 
@@ -87,6 +88,21 @@ func (m *ExtMetrics) TableName() string {
 
 func (m *ExtMetrics) VirtualTableName() string {
 	return m.VTableName
+}
+
+func (m *ExtMetrics) NativeTagVersion() uint32 {
+	switch m.MsgType {
+	case datatype.MESSAGE_TYPE_DFSTATS:
+		return nativetag.GetTableNativeTagsVersion(m.OrgId, nativetag.DEEPFLOW_TENANT)
+	case datatype.MESSAGE_TYPE_SERVER_DFSTATS:
+		if ckdb.IsValidOrgID(m.RawOrgId) {
+			return nativetag.GetTableNativeTagsVersion(m.OrgId, nativetag.DEEPFLOW_TENANT)
+		} else {
+			return nativetag.GetTableNativeTagsVersion(m.OrgId, nativetag.DEEPFLOW_ADMIN)
+		}
+	default:
+		return nativetag.GetTableNativeTagsVersion(m.OrgId, nativetag.EXT_METRICS)
+	}
 }
 
 func (m *ExtMetrics) OrgID() uint16 {

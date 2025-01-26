@@ -30,6 +30,7 @@ import (
 	utag "github.com/deepflowio/deepflow/server/ingester/exporters/universal_tag"
 	"github.com/deepflowio/deepflow/server/ingester/flow_tag"
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 	"github.com/deepflowio/deepflow/server/libs/pool"
 	"github.com/deepflowio/deepflow/server/libs/utils"
 )
@@ -104,6 +105,13 @@ type EventStore struct {
 	HasMetrics bool
 	Bytes      uint32 `json:"bytes" category:"$metrics" sub:"throughput"`
 	Duration   uint64 `json:"duration" category:"$metrics" sub:"delay"`
+}
+
+func (e *EventStore) NativeTagVersion() uint32 {
+	if e.HasMetrics {
+		return nativetag.GetTableNativeTagsVersion(e.OrgId, nativetag.EVENT_PERF_EVENT)
+	}
+	return nativetag.GetTableNativeTagsVersion(e.OrgId, nativetag.EVENT_EVENT)
 }
 
 func (e *EventStore) OrgID() uint16 {

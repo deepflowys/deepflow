@@ -58,6 +58,10 @@ func PcapStoreColumns() []*ckdb.Column {
 	}
 }
 
+func (s *PcapStore) NativeTagVersion() uint32 {
+	return 0
+}
+
 func (s *PcapStore) OrgID() uint16 {
 	return s.OrgId
 }

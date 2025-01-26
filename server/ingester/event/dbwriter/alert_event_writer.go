@@ -103,6 +103,10 @@ func (e *AlertEventStore) Release() {
 	ReleaseAlertEventStore(e)
 }
 
+func (e *AlertEventStore) NativeTagVersion() uint32 {
+	return 0
+}
+
 func (e *AlertEventStore) OrgID() uint16 {
 	return e.OrgId
 }

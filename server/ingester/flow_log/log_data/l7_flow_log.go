@@ -32,6 +32,7 @@ import (
 	"github.com/deepflowio/deepflow/server/libs/datatype/pb"
 	flow_metrics "github.com/deepflowio/deepflow/server/libs/flow-metrics"
 	"github.com/deepflowio/deepflow/server/libs/grpc"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 	"github.com/deepflowio/deepflow/server/libs/pool"
 	"github.com/deepflowio/deepflow/server/libs/utils"
 
@@ -255,6 +256,10 @@ func L7FlowLogColumns() []*ckdb.Column {
 		ckdb.NewColumn("events", ckdb.String).SetComment("OTel events"),
 	)
 	return l7Columns
+}
+
+func (h *L7FlowLog) NativeTagVersion() uint32 {
+	return nativetag.GetTableNativeTagsVersion(h.KnowledgeGraph.OrgId, nativetag.L7_FLOW_LOG)
 }
 
 func (h *L7FlowLog) OrgID() uint16 {

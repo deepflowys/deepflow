@@ -21,6 +21,7 @@ import (
 	"github.com/deepflowio/deepflow/server/libs/ckdb"
 	"github.com/deepflowio/deepflow/server/libs/datatype"
 	flow_metrics "github.com/deepflowio/deepflow/server/libs/flow-metrics"
+	"github.com/deepflowio/deepflow/server/libs/nativetag"
 )
 
 type ExtMetricsBlock struct {
@@ -33,6 +34,7 @@ type ExtMetricsBlock struct {
 	ColTagValues          *proto.ColArr[string]
 	ColMetricsFloatNames  *proto.ColArr[string]
 	ColMetricsFloatValues *proto.ColArr[float64]
+	*nativetag.NativeTagsBlock
 }
 
 func (b *ExtMetricsBlock) Reset() {
@@ -46,6 +48,9 @@ func (b *ExtMetricsBlock) Reset() {
 	b.ColTagValues.Reset()
 	b.ColMetricsFloatNames.Reset()
 	b.ColMetricsFloatValues.Reset()
+	if b.NativeTagsBlock != nil {
+		b.NativeTagsBlock.Reset()
+	}
 }
 
 func (b *ExtMetricsBlock) ToInput(input proto.Input) proto.Input {
@@ -61,11 +66,15 @@ func (b *ExtMetricsBlock) ToInput(input proto.Input) proto.Input {
 	if b.MsgType != datatype.MESSAGE_TYPE_DFSTATS && b.MsgType != datatype.MESSAGE_TYPE_SERVER_DFSTATS {
 		input = b.UniversalTagBlock.ToInput(input)
 	}
+
+	if b.NativeTagsBlock != nil {
+		input = b.NativeTagsBlock.ToInput(input)
+	}
 	return input
 }
 
 func (n *ExtMetrics) NewColumnBlock() ckdb.CKColumnBlock {
-	return &ExtMetricsBlock{
+	b := &ExtMetricsBlock{
 		MsgType:               n.MsgType,
 		UniversalTagBlock:     n.UniversalTag.NewColumnBlock().(*flow_metrics.UniversalTagBlock),
 		ColVirtualTableName:   new(proto.ColStr).LowCardinality(),
@@ -74,6 +83,15 @@ func (n *ExtMetrics) NewColumnBlock() ckdb.CKColumnBlock {
 		ColMetricsFloatNames:  new(proto.ColStr).LowCardinality().Array(),
 		ColMetricsFloatValues: new(proto.ColFloat64).Array(),
 	}
+	switch n.TableName() {
+	case DEEPFLOW_TENANT_COLLECTOR_TABLE:
+		b.NativeTagsBlock = nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.DEEPFLOW_TENANT)
+	case DEEPFLOW_ADMIN_SERVER_TABLE:
+		b.NativeTagsBlock = nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.DEEPFLOW_ADMIN)
+	case EXT_METRICS_TABLE:
+		b.NativeTagsBlock = nativetag.GetTableNativeTagsColumnBlock(n.OrgId, nativetag.EXT_METRICS)
+	}
+	return b
 }
 
 func (n *ExtMetrics) AppendToColumnBlock(b ckdb.CKColumnBlock) {
@@ -89,4 +107,7 @@ func (n *ExtMetrics) AppendToColumnBlock(b ckdb.CKColumnBlock) {
 	block.ColTagValues.Append(n.TagValues)
 	block.ColMetricsFloatNames.Append(n.MetricsFloatNames)
 	block.ColMetricsFloatValues.Append(n.MetricsFloatValues)
+	if block.NativeTagsBlock != nil {
+		block.NativeTagsBlock.AppendToColumnBlock(n.TagNames, n.TagValues, n.MetricsFloatNames, n.MetricsFloatValues)
+	}
 }
