@@ -20,5 +20,5 @@ const (
 	RAW_SQL_ROOT_DIR = "/etc/metadb/schema/rawsql"
 
 	DB_VERSION_TABLE    = "db_version"
-	DB_VERSION_EXPECTED = "7.0.1.5"
+	DB_VERSION_EXPECTED = "7.0.1.8"
 )
