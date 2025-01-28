@@ -27,8 +27,8 @@ use crate::{
         protocol_logs::{
             fastcgi::FastCGIInfo, pb_adapter::L7ProtocolSendLog, AmqpInfo, BrpcInfo, DnsInfo,
             DubboInfo, HttpInfo, KafkaInfo, MemcachedInfo, MongoDBInfo, MqttInfo, MysqlInfo,
-            NatsInfo, OpenWireInfo, PostgreInfo, PulsarInfo, RedisInfo, RocketmqInfo, SofaRpcInfo,
-            TarsInfo, ZmtpInfo,
+            NatsInfo, OpenWireInfo, PingInfo, PostgreInfo, PulsarInfo, RedisInfo, RocketmqInfo,
+            SofaRpcInfo, TarsInfo, ZmtpInfo,
         },
         AppProtoHead, LogMessageType, Result,
     },
@@ -84,6 +84,7 @@ cfg_if::cfg_if! {
             PostgreInfo(PostgreInfo),
             OpenWireInfo(OpenWireInfo),
             SofaRpcInfo(SofaRpcInfo),
+            PingInfo(PingInfo),
             CustomInfo(CustomInfo),
             // add new protocol info below
         );
@@ -112,6 +113,7 @@ cfg_if::cfg_if! {
             SofaRpcInfo(SofaRpcInfo),
             TlsInfo(crate::flow_generator::protocol_logs::tls::TlsInfo),
             SomeIpInfo(crate::flow_generator::protocol_logs::rpc::SomeIpInfo),
+            PingInfo(PingInfo),
             CustomInfo(CustomInfo),
             // add new protocol info below
         );

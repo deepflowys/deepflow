@@ -124,6 +124,7 @@ pub type L7ProtocolTuple = (L7Protocol, Option<Bitmap>);
 pub struct L7ProtocolChecker {
     tcp: Vec<L7ProtocolTuple>,
     udp: Vec<L7ProtocolTuple>,
+    other: Vec<L7ProtocolTuple>,
 }
 
 impl L7ProtocolChecker {
@@ -133,9 +134,14 @@ impl L7ProtocolChecker {
     ) -> Self {
         let mut tcp = vec![];
         let mut udp = vec![];
+        let mut other = vec![];
         for parser in get_all_protocol() {
             let protocol = parser.protocol();
             if !protocol_bitmap.is_enabled(protocol) {
+                continue;
+            }
+            if parser.parsable_on_other() {
+                other.push((protocol, port_bitmap.get(&protocol).map(|m| m.clone())));
                 continue;
             }
             if parser.parsable_on_tcp() {
@@ -146,7 +152,7 @@ impl L7ProtocolChecker {
             }
         }
 
-        L7ProtocolChecker { tcp, udp }
+        L7ProtocolChecker { tcp, udp, other }
     }
 
     pub fn possible_protocols(
@@ -158,7 +164,7 @@ impl L7ProtocolChecker {
             iter: match l4_protocol {
                 L4Protocol::Tcp => self.tcp.iter(),
                 L4Protocol::Udp => self.udp.iter(),
-                _ => [].iter(),
+                _ => self.other.iter(),
             },
             port,
         }
@@ -240,7 +246,7 @@ impl FlowLog {
         local_epc: i32,
         remote_epc: i32,
     ) -> Result<L7ParseResult> {
-        if let Some(payload) = packet.get_l4_payload() {
+        if let Some(payload) = packet.get_l7() {
             let mut parse_param = ParseParam::new(
                 &*packet,
                 self.perf_cache.clone(),
@@ -326,7 +332,7 @@ impl FlowLog {
         remote_epc: i32,
         checker: &L7ProtocolChecker,
     ) -> Result<L7ParseResult> {
-        if let Some(payload) = packet.get_l4_payload() {
+        if let Some(payload) = packet.get_l7() {
             let pkt_size = flow_config.l7_log_packet_size as usize;
 
             let cut_payload = if pkt_size > payload.len() {
@@ -466,7 +472,11 @@ impl FlowLog {
             );
         }
 
-        if packet.l4_payload_len() < 2 {
+        let Some(payload) = packet.get_l7() else {
+            return Err(Error::L7ProtocolUnknown);
+        };
+
+        if payload.len() < 2 {
             return Err(Error::L7ProtocolUnknown);
         }
 
@@ -584,11 +594,42 @@ impl FlowLog {
         Ok(L7ParseResult::None)
     }
 
-    pub fn parse_l3(&mut self, packet: &mut MetaPacket) -> Result<()> {
+    pub fn parse_l3(
+        &mut self,
+        flow_config: &FlowConfig,
+        log_parser_config: &LogParserConfig,
+        packet: &mut MetaPacket,
+        l7_performance_enabled: bool,
+        l7_log_parse_enabled: bool,
+        app_table: &mut AppTable,
+        local_epc: i32,
+        remote_epc: i32,
+        checker: &L7ProtocolChecker,
+    ) -> Result<L7ParseResult> {
         if let Some(l4) = self.l4.as_mut() {
             l4.parse(packet, false)?;
         }
-        Ok(())
+
+        if packet.signal_source == SignalSource::EBPF {
+            return Ok(L7ParseResult::None);
+        }
+
+        if l7_performance_enabled || l7_log_parse_enabled {
+            // 抛出错误由flowMap.FlowPerfCounter处理
+            return self.l7_parse(
+                flow_config,
+                log_parser_config,
+                packet,
+                app_table,
+                l7_performance_enabled,
+                l7_log_parse_enabled,
+                local_epc,
+                remote_epc,
+                checker,
+            );
+        }
+
+        Ok(L7ParseResult::None)
     }
 
     pub fn copy_and_reset_l4_perf_data(&mut self, flow_reversed: bool, flow: &mut Flow) {

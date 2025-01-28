@@ -5226,6 +5226,87 @@ operation requires the SYS_ADMIN permission. In passive mode deepflow-agent
 calculates the MAC and IP addresses used by Pods by capturing ARP/ND traffic.
 When set to adaptive, active mode will be used first.
 
+### Pull Resource From Controller {#inputs.resources.pull_resource_from_controller}
+
+Configurations for deepflow-server on pulling resources from controller.
+DeepFlow-agent will not read this section.
+
+#### Domain Filter {#inputs.resources.pull_resource_from_controller.domain_filter}
+
+**Tags**:
+
+`hot_update`
+
+**FQCN**:
+
+`inputs.resources.pull_resource_from_controller.domain_filter`
+
+Upgrade from old version: `domains`
+
+**Default value**:
+```yaml
+inputs:
+  resources:
+    pull_resource_from_controller:
+      domain_filter:
+      - '0'
+```
+
+**Enum options**:
+| Value | Note                         |
+| ----- | ---------------------------- |
+| _DYNAMIC_OPTIONS_ | _DYNAMIC_OPTIONS_ |
+
+**Schema**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | string |
+
+**Description**:
+
+Default value `0` means all domains, or can be set to a list of lcuuid of a
+series of domains, you can get lcuuid through 'deepflow-ctl domain list'.
+
+Note: The list of MAC and IP addresses is used by deepflow-agent to inject tags
+into data. This configuration can reduce the number and frequency of MAC and
+IP addresses delivered by deepflow-server to deepflow-agent. When there is no
+cross-domain service request, deepflow-server can be configured to only deliver
+the information in the local domain to deepflow-agent.
+
+#### Only K8s Pod IP in Local Cluster {#inputs.resources.pull_resource_from_controller.only_kubernetes_pod_ip_in_local_cluster}
+
+**Tags**:
+
+`hot_update`
+
+**FQCN**:
+
+`inputs.resources.pull_resource_from_controller.only_kubernetes_pod_ip_in_local_cluster`
+
+Upgrade from old version: `pod_cluster_internal_ip`
+
+**Default value**:
+```yaml
+inputs:
+  resources:
+    pull_resource_from_controller:
+      only_kubernetes_pod_ip_in_local_cluster: false
+```
+
+**Schema**:
+| Key  | Value                        |
+| ---- | ---------------------------- |
+| Type | bool |
+
+**Description**:
+
+The list of MAC and IP addresses is used by deepflow-agent to inject tags
+into data. This configuration can reduce the number and frequency of MAC and IP
+addresses delivered by deepflow-server to deepflow-agent. When the Pod IP is not
+used for direct communication between the K8s cluster and the outside world,
+deepflow-server can be configured to only deliver the information in the local
+K8s cluster to deepflow-agent.
+
 ## Integration {#inputs.integration}
 
 ### Enabled {#inputs.integration.enabled}
@@ -6368,6 +6449,7 @@ processors:
         NATS: 1-65535
         OpenWire: 1-65535
         Oracle: 1521
+        Ping: 1-65535
         PostgreSQL: 1-65535
         Pulsar: 1-65535
         Redis: 1-65535
@@ -6440,6 +6522,7 @@ processors:
         NATS: []
         OpenWire: []
         Oracle: []
+        Ping: []
         PostgreSQL: []
         Pulsar: []
         Redis: []

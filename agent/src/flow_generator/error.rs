@@ -114,6 +114,8 @@ pub enum Error {
     InsufficientPayloadLength,
     #[error("unsupported SOME/IP message type")]
     SomeIpUnsupportedMessageType,
+    #[error("ping header parse failed")]
+    PingHeaderParseFailed,
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

@@ -4506,6 +4506,7 @@ processors:
         RocketMQ: 1-65535
         DNS: 53,5353
         TLS: 443,6443
+        Ping: 1-65535
         Custom: 1-65535 # plugins
       # type: dict
       # name:
@@ -4649,6 +4650,7 @@ processors:
         RocketMQ: []
         DNS: []
         TLS: []
+        Ping: []
         Custom: []
       # type: string
       # name:

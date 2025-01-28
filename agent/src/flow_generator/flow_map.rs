@@ -971,8 +971,8 @@ impl FlowMap {
         {
             node.timeout = config.flow.flow_timeout.established_rst;
         }
-        if let Some(meta_flow_log) = node.meta_flow_log.as_mut() {
-            let _ = meta_flow_log.parse_l3(meta_packet);
+        if config.flow.collector_enabled {
+            self.collect_metric(config, node, meta_packet, true, true);
         }
         false
     }
@@ -1429,7 +1429,7 @@ impl FlowMap {
                 match meta_packet.lookup_key.proto {
                     IpProtocol::TCP => flow_config.rrt_tcp_timeout,
                     IpProtocol::UDP => flow_config.rrt_udp_timeout,
-                    _ => 0,
+                    _ => flow_config.rrt_udp_timeout,
                 },
                 flow_config.l7_protocol_inference_ttl as u64,
                 last,
@@ -1673,20 +1673,37 @@ impl FlowMap {
             } else {
                 (0, local_epc_id)
             };
+            let ip_protocol = meta_packet.lookup_key.proto;
 
             for packet in meta_packet {
-                match log.parse(
-                    flow_config,
-                    log_parser_config,
-                    packet,
-                    is_first_packet_direction,
-                    Self::l7_metrics_enabled(flow_config),
-                    Self::l7_log_parse_enabled(flow_config, &packet.lookup_key),
-                    &mut self.app_table,
-                    local_epc,
-                    remote_epc,
-                    &self.l7_protocol_checker,
-                ) {
+                let ret = if ip_protocol == IpProtocol::UDP || ip_protocol == IpProtocol::TCP {
+                    log.parse(
+                        flow_config,
+                        log_parser_config,
+                        packet,
+                        is_first_packet_direction,
+                        Self::l7_metrics_enabled(flow_config),
+                        Self::l7_log_parse_enabled(flow_config, &packet.lookup_key),
+                        &mut self.app_table,
+                        local_epc,
+                        remote_epc,
+                        &self.l7_protocol_checker,
+                    )
+                } else {
+                    log.parse_l3(
+                        flow_config,
+                        log_parser_config,
+                        packet,
+                        Self::l7_metrics_enabled(flow_config),
+                        Self::l7_log_parse_enabled(flow_config, &packet.lookup_key),
+                        &mut self.app_table,
+                        local_epc,
+                        remote_epc,
+                        &self.l7_protocol_checker,
+                    )
+                };
+
+                match ret {
                     Ok(info) => {
                         if let Some(perf_stats) = node.tagged_flow.flow.flow_perf_stats.as_mut() {
                             perf_stats.l7_protocol = log.l7_protocol_enum.get_l7_protocol();
@@ -1839,8 +1856,14 @@ impl FlowMap {
         node.flow_state = FlowState::Established;
         // opening timeout
         node.timeout = config.flow.flow_timeout.opening;
-        if let Some(meta_flow_log) = node.meta_flow_log.as_mut() {
-            let _ = meta_flow_log.parse_l3(meta_packet);
+        if config.flow.collector_enabled {
+            self.collect_metric(
+                config,
+                &mut node,
+                meta_packet,
+                meta_packet.lookup_key.direction == PacketDirection::ClientToServer,
+                true,
+            );
         }
         node
     }

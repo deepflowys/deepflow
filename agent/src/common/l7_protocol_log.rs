@@ -30,6 +30,7 @@ use super::flow::{L7PerfStats, PacketDirection};
 use super::l7_protocol_info::L7ProtocolInfo;
 use super::MetaPacket;
 
+use crate::common::meta_packet::{IcmpData, ProtocolData};
 use crate::config::handler::LogParserConfig;
 use crate::config::OracleConfig;
 use crate::flow_generator::flow_map::FlowMapCounter;
@@ -39,8 +40,8 @@ use crate::flow_generator::protocol_logs::plugin::get_custom_log_parser;
 use crate::flow_generator::protocol_logs::sql::ObfuscateCache;
 use crate::flow_generator::protocol_logs::{
     AmqpLog, BrpcLog, DnsLog, DubboLog, HttpLog, KafkaLog, MemcachedLog, MongoDBLog, MqttLog,
-    MysqlLog, NatsLog, OpenWireLog, PostgresqlLog, PulsarLog, RedisLog, RocketmqLog, SofaRpcLog,
-    TarsLog, ZmtpLog,
+    MysqlLog, NatsLog, OpenWireLog, PingLog, PostgresqlLog, PulsarLog, RedisLog, RocketmqLog,
+    SofaRpcLog, TarsLog, ZmtpLog,
 };
 
 use crate::flow_generator::{LogMessageType, Result};
@@ -185,6 +186,7 @@ cfg_if::cfg_if! {
                 ZMTP(ZmtpLog),
                 RocketMQ(RocketmqLog),
                 OpenWire(OpenWireLog),
+                Ping(PingLog),
                 // add protocol below
             }
         }
@@ -215,6 +217,7 @@ cfg_if::cfg_if! {
                 OpenWire(OpenWireLog),
                 TLS(crate::flow_generator::protocol_logs::tls::TlsLog),
                 SomeIp(crate::flow_generator::protocol_logs::rpc::SomeIpLog),
+                Ping(PingLog),
                 // add protocol below
             }
         }
@@ -288,6 +291,13 @@ pub trait L7ProtocolParserInterface {
     // whether l4 is parsed when udp, use for quickly protocol filter
     fn parsable_on_udp(&self) -> bool {
         true
+    }
+
+    // l4即不是udp也不是tcp，用于快速过滤协议
+    // ==============================
+    // L4 is neither UDP nor TCP and is used to quickly filter protocols
+    fn parsable_on_other(&self) -> bool {
+        false
     }
 
     // is parse default? use for config init.
@@ -373,6 +383,7 @@ pub struct ParseParam<'a> {
     pub port_src: u16,
     pub port_dst: u16,
     pub flow_id: u64,
+    pub icmp_data: Option<&'a IcmpData>,
 
     // parse info
     pub direction: PacketDirection,
@@ -430,6 +441,11 @@ impl<'a> ParseParam<'a> {
             ip_dst: packet.lookup_key.dst_ip,
             port_src: packet.lookup_key.src_port,
             port_dst: packet.lookup_key.dst_port,
+            icmp_data: if let ProtocolData::IcmpData(icmp_data) = &packet.protocol_data {
+                Some(icmp_data)
+            } else {
+                None
+            },
             flow_id: packet.flow_id,
 
             direction: packet.lookup_key.direction,
